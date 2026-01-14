@@ -74,6 +74,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/whack-mole"
+        element={
+          <ProtectedRoute>
+            <WhackMolePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
