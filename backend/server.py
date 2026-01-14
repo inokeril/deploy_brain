@@ -534,6 +534,204 @@ async def get_profile_stats(user: Dict[str, Any] = Depends(get_current_user)):
     }
 
 # ============================================================================
+# SPOT THE DIFFERENCE GAME ROUTES
+# ============================================================================
+
+# Import game logic
+from spot_difference_logic import (
+    generate_spot_difference_game,
+    find_clicked_difference,
+    DIFFICULTY_SETTINGS
+)
+
+class SpotDifferenceStartRequest(BaseModel):
+    difficulty: str  # easy, medium, hard
+
+class SpotDifferenceClickRequest(BaseModel):
+    game_id: str
+    x_percent: float  # 0-100
+    y_percent: float  # 0-100
+
+@api_router.post("/spot-difference/start")
+async def start_spot_difference_game(
+    request: SpotDifferenceStartRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Start a new spot the difference game.
+    Generates two images with differences.
+    """
+    difficulty = request.difficulty
+    
+    if difficulty not in DIFFICULTY_SETTINGS:
+        raise HTTPException(status_code=400, detail="Invalid difficulty level")
+    
+    try:
+        # Generate game
+        logger.info(f"Generating spot difference game for user {user['user_id']}, difficulty: {difficulty}")
+        game_data = await generate_spot_difference_game(difficulty)
+        
+        # Save game to database
+        game_doc = {
+            "game_id": game_data["game_id"],
+            "user_id": user["user_id"],
+            "difficulty": difficulty,
+            "theme": game_data["theme"],
+            "differences": game_data["differences"],
+            "found_count": 0,
+            "total_differences": game_data["total_differences"],
+            "completed": False,
+            "start_time": datetime.now(timezone.utc).isoformat(),
+            "end_time": None
+        }
+        
+        await db.spot_difference_games.insert_one(game_doc)
+        
+        # Return game data (without saving images in DB - too large)
+        return {
+            "game_id": game_data["game_id"],
+            "difficulty": difficulty,
+            "image1": game_data["image1"],
+            "image2": game_data["image2"],
+            "total_differences": game_data["total_differences"],
+            "found_count": 0
+        }
+        
+    except Exception as e:
+        logger.error(f"Error generating spot difference game: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to generate game: {str(e)}")
+
+@api_router.post("/spot-difference/check")
+async def check_spot_difference_click(
+    request: SpotDifferenceClickRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Check if a click hits a difference.
+    """
+    # Get game from database
+    game_doc = await db.spot_difference_games.find_one(
+        {"game_id": request.game_id, "user_id": user["user_id"]},
+        {"_id": 0}
+    )
+    
+    if not game_doc:
+        raise HTTPException(status_code=404, detail="Game not found")
+    
+    if game_doc["completed"]:
+        raise HTTPException(status_code=400, detail="Game already completed")
+    
+    # Check click
+    differences = game_doc["differences"]
+    found, diff_index = find_clicked_difference(request.x_percent, request.y_percent, differences)
+    
+    if found:
+        # Mark difference as found
+        differences[diff_index]["found"] = True
+        found_count = sum(1 for d in differences if d.get("found", False))
+        
+        # Check if game completed
+        completed = found_count == game_doc["total_differences"]
+        
+        update_data = {
+            "differences": differences,
+            "found_count": found_count,
+            "completed": completed
+        }
+        
+        if completed:
+            update_data["end_time"] = datetime.now(timezone.utc).isoformat()
+            
+            # Calculate time taken
+            start_time = datetime.fromisoformat(game_doc["start_time"])
+            end_time = datetime.now(timezone.utc)
+            time_taken = (end_time - start_time).total_seconds()
+            
+            # Save result
+            result_doc = {
+                "result_id": f"result_{uuid.uuid4().hex[:12]}",
+                "user_id": user["user_id"],
+                "exercise_id": "spot-difference",
+                "score": game_doc["total_differences"],
+                "time": time_taken,
+                "difficulty": game_doc["difficulty"],
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.user_results.insert_one(result_doc)
+            
+            # Update user progress
+            await update_user_progress_for_spot_difference(user["user_id"], time_taken, game_doc["difficulty"])
+        
+        # Update game
+        await db.spot_difference_games.update_one(
+            {"game_id": request.game_id},
+            {"$set": update_data}
+        )
+        
+        return {
+            "correct": True,
+            "found_count": found_count,
+            "total_differences": game_doc["total_differences"],
+            "completed": completed,
+            "difference_area": differences[diff_index]["area"],
+            "time_taken": time_taken if completed else None
+        }
+    else:
+        return {
+            "correct": False,
+            "found_count": game_doc["found_count"],
+            "total_differences": game_doc["total_differences"],
+            "completed": False
+        }
+
+async def update_user_progress_for_spot_difference(user_id: str, time: float, difficulty: str):
+    """
+    Update user progress for spot the difference exercise.
+    """
+    exercise_id = "spot-difference"
+    
+    progress = await db.user_progress.find_one(
+        {"user_id": user_id, "exercise_id": exercise_id},
+        {"_id": 0}
+    )
+    
+    if progress:
+        # Update existing progress
+        total_games = progress["total_games"] + 1
+        best_score = min(time, progress.get("best_score", time))
+        
+        # Calculate average
+        current_avg = progress.get("average_score", time)
+        new_avg = ((current_avg * progress["total_games"]) + time) / total_games
+        
+        # Calculate level
+        level = 1 + (total_games // 10)
+        
+        await db.user_progress.update_one(
+            {"user_id": user_id, "exercise_id": exercise_id},
+            {"$set": {
+                "total_games": total_games,
+                "best_score": best_score,
+                "average_score": new_avg,
+                "level": level,
+                "last_played": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Create new progress
+        progress_doc = {
+            "progress_id": f"progress_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "exercise_id": exercise_id,
+            "level": 1,
+            "total_games": 1,
+            "best_score": time,
+            "average_score": time,
+            "last_played": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_progress.insert_one(progress_doc)
+
+# ============================================================================
 # BASIC ROUTES
 # ============================================================================
 
