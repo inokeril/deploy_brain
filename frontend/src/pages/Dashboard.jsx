@@ -12,7 +12,11 @@ import {
   Calculator,
   Clock,
   Trophy,
-  TrendingUp
+  TrendingUp,
+  Palette,
+  Type,
+  Target,
+  Keyboard
 } from 'lucide-react';
 
 const iconMap = {
@@ -21,6 +25,10 @@ const iconMap = {
   'scan-search': ScanSearch,
   'zap': Zap,
   'calculator': Calculator,
+  'palette': Palette,
+  'type': Type,
+  'target': Target,
+  'keyboard': Keyboard,
 };
 
 const difficultyColors = {
