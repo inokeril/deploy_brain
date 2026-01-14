@@ -12,6 +12,7 @@ import SchultePage from "@/pages/SchultePage";
 import SpotDifferencePage from "@/pages/SpotDifferencePage";
 import StroopPage from "@/pages/StroopPage";
 import CatchLetterPage from "@/pages/CatchLetterPage";
+import WhackMolePage from "@/pages/WhackMolePage";
 import Competitions from "@/pages/Competitions";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
