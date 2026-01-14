@@ -165,6 +165,18 @@ backend:
           agent: "main"
           comment: "GET /api/profile/stats - статистика пользователя по всем упражнениям"
 
+  - task: "Spot Difference Game"
+    implemented: true
+    working: true
+    file: "backend/spot_difference_logic.py, backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Реализована игра 'Найди отличия' с AI-генерацией изображений через Gemini Nano Banana. Три уровня сложности (easy/medium/hard). Эндпоинты: POST /api/spot-difference/start, POST /api/spot-difference/check. Система зон для проверки кликов. Автоматическое сохранение результатов и обновление прогресса"
+
 frontend:
   - task: "Authentication Flow"
     implemented: true
