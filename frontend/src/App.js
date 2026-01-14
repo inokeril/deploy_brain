@@ -56,6 +56,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/reaction"
+        element={
+          <ProtectedRoute>
+            <ReactionPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
