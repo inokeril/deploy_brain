@@ -56,10 +56,10 @@ function AppRouter() {
         }
       />
       <Route
-        path="/exercise/reaction"
+        path="/exercise/stroop"
         element={
           <ProtectedRoute>
-            <ReactionPage />
+            <StroopPage />
           </ProtectedRoute>
         }
       />
