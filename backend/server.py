@@ -733,6 +733,17 @@ async def check_spot_difference_click(
             }
             await db.user_results.insert_one(result_doc)
             
+            # Mark template as solved by this user
+            solved_record = {
+                "record_id": f"solved_{uuid.uuid4().hex[:12]}",
+                "user_id": user["user_id"],
+                "template_id": game_doc["template_id"],
+                "difficulty": game_doc["difficulty"],
+                "completed_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.user_solved_templates.insert_one(solved_record)
+            logger.info(f"User {user['user_id']} solved template {game_doc['template_id']}")
+            
             # Update user progress
             await update_user_progress_for_spot_difference(user["user_id"], time_taken, game_doc["difficulty"])
         
