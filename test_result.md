@@ -171,11 +171,14 @@ backend:
     file: "backend/spot_difference_logic.py, backend/server.py"
     stuck_count: 0
     priority: "high"
-    needs_retesting: true
+    needs_retesting: false
     status_history:
         - working: true
           agent: "main"
           comment: "Реализована игра 'Найди отличия' с AI-генерацией изображений через Gemini Nano Banana. Три уровня сложности (easy/medium/hard). Эндпоинты: POST /api/spot-difference/start, POST /api/spot-difference/check. Система зон для проверки кликов. Автоматическое сохранение результатов и обновление прогресса"
+        - working: true
+          agent: "testing"
+          comment: "✅ ПОЛНОСТЬЮ ПРОТЕСТИРОВАНО: POST /api/spot-difference/start работает корректно для всех уровней сложности (easy=3, medium=5, hard=7 отличий). Возвращает game_id, image1/image2 (валидные base64), total_differences. AI-генерация изображений через Gemini работает (время генерации ~30-60 сек). POST /api/spot-difference/check работает. Аутентификация работает. Обработка ошибок корректна (400 для неверной сложности, 401 без авторизации, 404 для несуществующей игры). Логи показывают успешные вызовы LiteLLM/Gemini API без ошибок."
 
 frontend:
   - task: "Authentication Flow"
