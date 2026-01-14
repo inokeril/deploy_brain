@@ -9,6 +9,7 @@ import Login from "@/pages/Login";
 import AuthCallback from "@/pages/AuthCallback";
 import Dashboard from "@/pages/Dashboard";
 import SchultePage from "@/pages/SchultePage";
+import SpotDifferencePage from "@/pages/SpotDifferencePage";
 import Competitions from "@/pages/Competitions";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
