@@ -138,6 +138,8 @@ const Dashboard = () => {
   const handlePlayExercise = (exerciseId) => {
     if (exerciseId === 'schulte') {
       navigate('/exercise/schulte');
+    } else if (exerciseId === 'spot-difference') {
+      navigate('/exercise/spot-difference');
     } else {
       // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
