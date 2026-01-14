@@ -114,6 +114,31 @@ const SchulteGame = () => {
     initializeGame();
   };
 
+  // Save result to backend
+  const saveResult = async (time) => {
+    try {
+      const response = await fetch(`${process.env.REACT_APP_BACKEND_URL}/api/results`, {
+        method: 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+        },
+        credentials: 'include',
+        body: JSON.stringify({
+          exercise_id: 'schulte',
+          score: gridSize * gridSize,
+          time: time,
+          grid_size: gridSize,
+        }),
+      });
+
+      if (!response.ok) {
+        console.error('Failed to save result');
+      }
+    } catch (error) {
+      console.error('Error saving result:', error);
+    }
+  };
+
   // Initialize numbers on mount and grid size change
   useEffect(() => {
     setNumbers(generateNumbers(gridSize));
