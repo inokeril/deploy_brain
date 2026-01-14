@@ -817,79 +817,31 @@ async def update_user_progress_for_spot_difference(user_id: str, time: float, di
         await db.user_progress.insert_one(progress_doc)
 
 # ============================================================================
-# REACTION TIME GAME ROUTES
+# NEW MINI-GAMES ROUTES
 # ============================================================================
 
-class ReactionSaveRequest(BaseModel):
-    difficulty: str  # easy, medium, hard
-    attempts: List[float]  # Array of reaction times in milliseconds
-    average_time: float
-    best_time: float
-
-@api_router.post("/reaction/save")
-async def save_reaction_result(
-    request: ReactionSaveRequest,
-    user: Dict[str, Any] = Depends(get_current_user)
-):
+# Common helper function for updating progress
+async def update_game_progress(user_id: str, exercise_id: str, score: float, is_lower_better: bool = False):
     """
-    Save reaction time game result.
+    Generic function to update user progress for any game.
     """
-    user_id = user["user_id"]
-    
-    # Validate difficulty
-    if request.difficulty not in ['easy', 'medium', 'hard']:
-        raise HTTPException(status_code=400, detail="Invalid difficulty level")
-    
-    try:
-        # Save result
-        result_doc = {
-            "result_id": f"result_{uuid.uuid4().hex[:12]}",
-            "user_id": user_id,
-            "exercise_id": "reaction",
-            "score": len(request.attempts),  # Number of attempts
-            "time": request.average_time,  # Average reaction time (lower is better)
-            "difficulty": request.difficulty,
-            "attempts": request.attempts,
-            "best_time": request.best_time,
-            "created_at": datetime.now(timezone.utc).isoformat()
-        }
-        await db.user_results.insert_one(result_doc)
-        
-        # Update user progress
-        await update_user_progress_for_reaction(user_id, request.average_time, request.difficulty)
-        
-        return {
-            "message": "Result saved successfully",
-            "result_id": result_doc["result_id"]
-        }
-        
-    except Exception as e:
-        logger.error(f"Error saving reaction result: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to save result: {str(e)}")
-
-async def update_user_progress_for_reaction(user_id: str, avg_time: float, difficulty: str):
-    """
-    Update user progress for reaction time exercise.
-    For reaction time, lower is better, so we track best (minimum) time.
-    """
-    exercise_id = "reaction"
-    
     progress = await db.user_progress.find_one(
         {"user_id": user_id, "exercise_id": exercise_id},
         {"_id": 0}
     )
     
     if progress:
-        # Update existing progress
         total_games = progress["total_games"] + 1
-        # For reaction time, best_score is MINIMUM time (lower is better)
-        best_score = min(avg_time, progress.get("best_score", avg_time))
         
-        # Calculate average
-        current_avg = progress.get("average_score", avg_time)
-        new_avg = ((current_avg * progress["total_games"]) + avg_time) / total_games
+        if is_lower_better:
+            # For games where lower is better (time-based)
+            best_score = min(score, progress.get("best_score", score))
+        else:
+            # For games where higher is better (accuracy/points)
+            best_score = max(score, progress.get("best_score", score))
         
-        # Calculate level
+        current_avg = progress.get("average_score", score)
+        new_avg = ((current_avg * progress["total_games"]) + score) / total_games
         level = 1 + (total_games // 10)
         
         await db.user_progress.update_one(
@@ -903,18 +855,158 @@ async def update_user_progress_for_reaction(user_id: str, avg_time: float, diffi
             }}
         )
     else:
-        # Create new progress
         progress_doc = {
             "progress_id": f"progress_{uuid.uuid4().hex[:12]}",
             "user_id": user_id,
             "exercise_id": exercise_id,
             "level": 1,
             "total_games": 1,
-            "best_score": avg_time,
-            "average_score": avg_time,
+            "best_score": score,
+            "average_score": score,
             "last_played": datetime.now(timezone.utc).isoformat()
         }
         await db.user_progress.insert_one(progress_doc)
+
+# 1. Stroop Test (Color Reaction)
+class StroopSaveRequest(BaseModel):
+    difficulty: str
+    correct_answers: int
+    total_questions: int
+    average_time: float  # Average time per question in seconds
+
+@api_router.post("/stroop/save")
+async def save_stroop_result(
+    request: StroopSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save Stroop test result."""
+    try:
+        accuracy = (request.correct_answers / request.total_questions) * 100
+        
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "stroop",
+            "score": accuracy,
+            "time": request.average_time,
+            "difficulty": request.difficulty,
+            "correct_answers": request.correct_answers,
+            "total_questions": request.total_questions,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "stroop", accuracy)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving stroop result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 2. Catch Letter
+class CatchLetterSaveRequest(BaseModel):
+    difficulty: str
+    caught_letters: int
+    missed_letters: int
+    total_time: float  # Total game time in seconds
+
+@api_router.post("/catch-letter/save")
+async def save_catch_letter_result(
+    request: CatchLetterSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save catch letter game result."""
+    try:
+        total = request.caught_letters + request.missed_letters
+        accuracy = (request.caught_letters / total * 100) if total > 0 else 0
+        
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "catch-letter",
+            "score": request.caught_letters,
+            "time": request.total_time,
+            "difficulty": request.difficulty,
+            "caught": request.caught_letters,
+            "missed": request.missed_letters,
+            "accuracy": accuracy,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "catch-letter", request.caught_letters)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving catch-letter result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 3. Whack-a-Mole
+class WhackMoleSaveRequest(BaseModel):
+    difficulty: str
+    hits: int
+    misses: int
+    total_time: float
+
+@api_router.post("/whack-mole/save")
+async def save_whack_mole_result(
+    request: WhackMoleSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save whack-a-mole game result."""
+    try:
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "whack-mole",
+            "score": request.hits,
+            "time": request.total_time,
+            "difficulty": request.difficulty,
+            "hits": request.hits,
+            "misses": request.misses,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "whack-mole", request.hits)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving whack-mole result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# 4. Typing Speed
+class TypingSaveRequest(BaseModel):
+    difficulty: str
+    wpm: float  # Words per minute
+    accuracy: float  # Percentage
+    total_time: float
+
+@api_router.post("/typing/save")
+async def save_typing_result(
+    request: TypingSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save typing speed result."""
+    try:
+        # Score is WPM adjusted by accuracy
+        adjusted_wpm = request.wpm * (request.accuracy / 100)
+        
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "typing",
+            "score": adjusted_wpm,
+            "time": request.total_time,
+            "difficulty": request.difficulty,
+            "wpm": request.wpm,
+            "accuracy": request.accuracy,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "typing", adjusted_wpm)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving typing result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
 # BASIC ROUTES
