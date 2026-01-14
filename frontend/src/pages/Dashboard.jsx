@@ -150,6 +150,8 @@ const Dashboard = () => {
       navigate('/exercise/spot-difference');
     } else if (exerciseId === 'stroop') {
       navigate('/exercise/stroop');
+    } else if (exerciseId === 'catch-letter') {
+      navigate('/exercise/catch-letter');
     } else {
       // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
