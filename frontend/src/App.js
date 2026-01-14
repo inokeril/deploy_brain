@@ -65,6 +65,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/catch-letter"
+        element={
+          <ProtectedRoute>
+            <CatchLetterPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
