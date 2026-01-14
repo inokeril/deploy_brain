@@ -262,6 +262,18 @@ frontend:
           agent: "main"
           comment: "Страница соревнований создана как заглушка с информацией о будущем функционале"
 
+  - task: "Spot Difference Game Page & Component"
+    implemented: true
+    working: true
+    file: "frontend/src/pages/SpotDifferencePage.jsx, frontend/src/components/SpotDifferenceGame.jsx"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: true
+    status_history:
+        - working: true
+          agent: "main"
+          comment: "Страница выбора сложности и компонент игры 'Найди отличия'. Визуальные маркеры для кликов, таймер, счётчик найденных отличий, модальное окно с результатами. Интеграция с backend API"
+
 metadata:
   created_by: "main_agent"
   version: "1.0"
