@@ -152,6 +152,8 @@ const Dashboard = () => {
       navigate('/exercise/stroop');
     } else if (exerciseId === 'catch-letter') {
       navigate('/exercise/catch-letter');
+    } else if (exerciseId === 'whack-mole') {
+      navigate('/exercise/whack-mole');
     } else {
       // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
