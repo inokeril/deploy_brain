@@ -110,6 +110,28 @@ class CompetitionResult(BaseModel):
     attempts: int = 1
     last_attempt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
+class SpotDifferenceTemplate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    template_id: str = Field(default_factory=lambda: f"template_{uuid.uuid4().hex[:12]}")
+    difficulty: str  # easy, medium, hard
+    theme: str
+    image1: str  # base64
+    image2: str  # base64
+    differences: List[Dict]
+    total_differences: int
+    times_played: int = 0
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserSolvedTemplate(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    record_id: str = Field(default_factory=lambda: f"solved_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    template_id: str
+    difficulty: str
+    completed_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
 # Request/Response models
 class SessionRequest(BaseModel):
     session_id: str
