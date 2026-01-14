@@ -45,7 +45,7 @@ const difficultyLabels = {
 
 const ExerciseCard = ({ exercise, onPlay }) => {
   const Icon = iconMap[exercise.icon] || Grid3x3;
-  const isAvailable = ['schulte', 'spot-difference', 'stroop'].includes(exercise.exercise_id);
+  const isAvailable = ['schulte', 'spot-difference', 'stroop', 'catch-letter'].includes(exercise.exercise_id);
 
   return (
     <Card className={`group hover:shadow-lg transition-all duration-300 ${!isAvailable ? 'opacity-60' : ''}`}>
