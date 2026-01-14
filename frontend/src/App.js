@@ -47,6 +47,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/spot-difference"
+        element={
+          <ProtectedRoute>
+            <SpotDifferencePage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
