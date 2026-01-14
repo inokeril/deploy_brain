@@ -1,4 +1,5 @@
-from fastapi import FastAPI, APIRouter
+from fastapi import FastAPI, APIRouter, HTTPException, Request, Response, Depends, Header
+from fastapi.responses import JSONResponse
 from dotenv import load_dotenv
 from starlette.middleware.cors import CORSMiddleware
 from motor.motor_asyncio import AsyncIOMotorClient
@@ -6,10 +7,10 @@ import os
 import logging
 from pathlib import Path
 from pydantic import BaseModel, Field, ConfigDict
-from typing import List
+from typing import List, Optional, Dict, Any
 import uuid
-from datetime import datetime, timezone
-
+from datetime import datetime, timezone, timedelta
+import httpx
 
 ROOT_DIR = Path(__file__).parent
 load_dotenv(ROOT_DIR / '.env')
@@ -25,46 +26,524 @@ app = FastAPI()
 # Create a router with the /api prefix
 api_router = APIRouter(prefix="/api")
 
+# Configure logging
+logging.basicConfig(
+    level=logging.INFO,
+    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
+)
+logger = logging.getLogger(__name__)
 
-# Define Models
-class StatusCheck(BaseModel):
-    model_config = ConfigDict(extra="ignore")  # Ignore MongoDB's _id field
+# ============================================================================
+# MODELS
+# ============================================================================
+
+class User(BaseModel):
+    model_config = ConfigDict(extra="ignore")
     
-    id: str = Field(default_factory=lambda: str(uuid.uuid4()))
-    client_name: str
-    timestamp: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+    user_id: str = Field(default_factory=lambda: f"user_{uuid.uuid4().hex[:12]}")
+    email: str
+    name: str
+    picture: Optional[str] = None
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-class StatusCheckCreate(BaseModel):
-    client_name: str
+class UserSession(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    session_id: str = Field(default_factory=lambda: f"session_{uuid.uuid4().hex}")
+    user_id: str
+    session_token: str
+    expires_at: datetime
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
 
-# Add your routes to the router instead of directly to app
+class Exercise(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    exercise_id: str
+    name: str
+    description: str
+    icon: str
+    difficulty: str  # easy, medium, hard
+    category: str
+
+class UserResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    result_id: str = Field(default_factory=lambda: f"result_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    exercise_id: str
+    score: int  # For Schulte: grid size (e.g., 25 for 5x5)
+    time: float  # Time in seconds
+    grid_size: Optional[int] = None  # For Schulte tables
+    created_at: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+class UserProgress(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    progress_id: str = Field(default_factory=lambda: f"progress_{uuid.uuid4().hex[:12]}")
+    user_id: str
+    exercise_id: str
+    level: int = 1
+    total_games: int = 0
+    best_score: Optional[float] = None
+    average_score: Optional[float] = None
+    last_played: Optional[datetime] = None
+
+class Competition(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    competition_id: str = Field(default_factory=lambda: f"comp_{uuid.uuid4().hex[:12]}")
+    exercise_id: str
+    name: str
+    description: str
+    start_date: datetime
+    end_date: datetime
+    prize_description: str
+    is_active: bool = True
+
+class CompetitionResult(BaseModel):
+    model_config = ConfigDict(extra="ignore")
+    
+    comp_result_id: str = Field(default_factory=lambda: f"comp_res_{uuid.uuid4().hex[:12]}")
+    competition_id: str
+    user_id: str
+    best_time: float
+    attempts: int = 1
+    last_attempt: datetime = Field(default_factory=lambda: datetime.now(timezone.utc))
+
+# Request/Response models
+class SessionRequest(BaseModel):
+    session_id: str
+
+class ResultCreate(BaseModel):
+    exercise_id: str
+    score: int
+    time: float
+    grid_size: Optional[int] = None
+
+# ============================================================================
+# AUTHENTICATION HELPERS
+# ============================================================================
+
+async def get_current_user(
+    request: Request,
+    authorization: Optional[str] = Header(None)
+) -> Dict[str, Any]:
+    """
+    Get current user from session_token cookie or Authorization header.
+    Cookie takes precedence over header.
+    """
+    session_token = None
+    
+    # Check cookie first
+    session_token = request.cookies.get("session_token")
+    
+    # Fallback to Authorization header
+    if not session_token and authorization:
+        if authorization.startswith("Bearer "):
+            session_token = authorization.replace("Bearer ", "")
+        else:
+            session_token = authorization
+    
+    if not session_token:
+        raise HTTPException(status_code=401, detail="Not authenticated")
+    
+    # Find session in database
+    session_doc = await db.user_sessions.find_one(
+        {"session_token": session_token},
+        {"_id": 0}
+    )
+    
+    if not session_doc:
+        raise HTTPException(status_code=401, detail="Invalid session")
+    
+    # Check if session is expired
+    expires_at = session_doc["expires_at"]
+    if isinstance(expires_at, str):
+        expires_at = datetime.fromisoformat(expires_at)
+    if expires_at.tzinfo is None:
+        expires_at = expires_at.replace(tzinfo=timezone.utc)
+    
+    if expires_at < datetime.now(timezone.utc):
+        raise HTTPException(status_code=401, detail="Session expired")
+    
+    # Get user data
+    user_doc = await db.users.find_one(
+        {"user_id": session_doc["user_id"]},
+        {"_id": 0}
+    )
+    
+    if not user_doc:
+        raise HTTPException(status_code=404, detail="User not found")
+    
+    return user_doc
+
+# ============================================================================
+# AUTHENTICATION ROUTES
+# ============================================================================
+
+@api_router.post("/auth/session")
+async def create_session(session_request: SessionRequest, response: Response):
+    """
+    Exchange session_id for user data and create session_token.
+    """
+    try:
+        # Call Emergent Auth API to get user data
+        async with httpx.AsyncClient() as client:
+            auth_response = await client.get(
+                "https://demobackend.emergentagent.com/auth/v1/env/oauth/session-data",
+                headers={"X-Session-ID": session_request.session_id},
+                timeout=10.0
+            )
+            
+            if auth_response.status_code != 200:
+                raise HTTPException(status_code=401, detail="Invalid session ID")
+            
+            user_data = auth_response.json()
+        
+        # Check if user exists
+        existing_user = await db.users.find_one(
+            {"email": user_data["email"]},
+            {"_id": 0}
+        )
+        
+        if existing_user:
+            user_id = existing_user["user_id"]
+            # Update user data if needed
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "name": user_data["name"],
+                    "picture": user_data.get("picture")
+                }}
+            )
+        else:
+            # Create new user
+            user_id = f"user_{uuid.uuid4().hex[:12]}"
+            new_user = {
+                "user_id": user_id,
+                "email": user_data["email"],
+                "name": user_data["name"],
+                "picture": user_data.get("picture"),
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(new_user)
+        
+        # Create session
+        session_token = user_data["session_token"]
+        expires_at = datetime.now(timezone.utc) + timedelta(days=7)
+        
+        session_doc = {
+            "session_id": f"session_{uuid.uuid4().hex}",
+            "user_id": user_id,
+            "session_token": session_token,
+            "expires_at": expires_at.isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.user_sessions.insert_one(session_doc)
+        
+        # Set cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=7 * 24 * 60 * 60,  # 7 days
+            path="/"
+        )
+        
+        # Get full user data
+        user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+        
+        return {
+            "user": user_doc,
+            "session_token": session_token
+        }
+        
+    except httpx.RequestError as e:
+        logger.error(f"Error calling Emergent Auth API: {e}")
+        raise HTTPException(status_code=500, detail="Authentication service error")
+
+@api_router.get("/auth/me")
+async def get_me(user: Dict[str, Any] = Depends(get_current_user)):
+    """
+    Get current authenticated user data.
+    """
+    return user
+
+@api_router.post("/auth/logout")
+async def logout(request: Request, response: Response):
+    """
+    Logout user by deleting session.
+    """
+    session_token = request.cookies.get("session_token")
+    
+    if session_token:
+        # Delete session from database
+        await db.user_sessions.delete_one({"session_token": session_token})
+    
+    # Clear cookie
+    response.delete_cookie(key="session_token", path="/")
+    
+    return {"message": "Logged out successfully"}
+
+# ============================================================================
+# EXERCISE ROUTES
+# ============================================================================
+
+@api_router.get("/exercises")
+async def get_exercises():
+    """
+    Get all available exercises.
+    """
+    exercises = await db.exercises.find({}, {"_id": 0}).to_list(100)
+    
+    if not exercises:
+        # Initialize default exercises if none exist
+        default_exercises = [
+            {
+                "exercise_id": "schulte",
+                "name": "Таблицы Шульте",
+                "description": "Тренировка периферийного зрения и концентрации",
+                "icon": "grid-3x3",
+                "difficulty": "medium",
+                "category": "attention"
+            },
+            {
+                "exercise_id": "sequence",
+                "name": "Запоминание последовательностей",
+                "description": "Запомните порядок чисел или цветов",
+                "icon": "list-ordered",
+                "difficulty": "medium",
+                "category": "memory"
+            },
+            {
+                "exercise_id": "spot-difference",
+                "name": "Поиск отличий",
+                "description": "Найдите различия между изображениями",
+                "icon": "scan-search",
+                "difficulty": "easy",
+                "category": "attention"
+            },
+            {
+                "exercise_id": "reaction",
+                "name": "Скорость реакции",
+                "description": "Проверьте свою скорость реакции",
+                "icon": "zap",
+                "difficulty": "easy",
+                "category": "speed"
+            },
+            {
+                "exercise_id": "math",
+                "name": "Математические задачи",
+                "description": "Решайте примеры на скорость",
+                "icon": "calculator",
+                "difficulty": "hard",
+                "category": "logic"
+            }
+        ]
+        
+        await db.exercises.insert_many(default_exercises)
+        exercises = default_exercises
+    
+    return exercises
+
+@api_router.get("/exercises/{exercise_id}")
+async def get_exercise(exercise_id: str):
+    """
+    Get specific exercise details.
+    """
+    exercise = await db.exercises.find_one(
+        {"exercise_id": exercise_id},
+        {"_id": 0}
+    )
+    
+    if not exercise:
+        raise HTTPException(status_code=404, detail="Exercise not found")
+    
+    return exercise
+
+# ============================================================================
+# RESULTS ROUTES
+# ============================================================================
+
+@api_router.post("/results")
+async def save_result(
+    result_data: ResultCreate,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Save user's exercise result and update progress.
+    """
+    user_id = user["user_id"]
+    
+    # Create result document
+    result_doc = {
+        "result_id": f"result_{uuid.uuid4().hex[:12]}",
+        "user_id": user_id,
+        "exercise_id": result_data.exercise_id,
+        "score": result_data.score,
+        "time": result_data.time,
+        "grid_size": result_data.grid_size,
+        "created_at": datetime.now(timezone.utc).isoformat()
+    }
+    
+    await db.user_results.insert_one(result_doc)
+    
+    # Update user progress
+    progress = await db.user_progress.find_one(
+        {"user_id": user_id, "exercise_id": result_data.exercise_id},
+        {"_id": 0}
+    )
+    
+    if progress:
+        # Update existing progress
+        total_games = progress["total_games"] + 1
+        best_score = min(result_data.time, progress.get("best_score", result_data.time))
+        
+        # Calculate average (simple moving average)
+        current_avg = progress.get("average_score", result_data.time)
+        new_avg = ((current_avg * progress["total_games"]) + result_data.time) / total_games
+        
+        # Calculate level (1 level per 10 games, with bonus for good scores)
+        level = 1 + (total_games // 10)
+        
+        await db.user_progress.update_one(
+            {"user_id": user_id, "exercise_id": result_data.exercise_id},
+            {"$set": {
+                "total_games": total_games,
+                "best_score": best_score,
+                "average_score": new_avg,
+                "level": level,
+                "last_played": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Create new progress
+        progress_doc = {
+            "progress_id": f"progress_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "exercise_id": result_data.exercise_id,
+            "level": 1,
+            "total_games": 1,
+            "best_score": result_data.time,
+            "average_score": result_data.time,
+            "last_played": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_progress.insert_one(progress_doc)
+    
+    return {"message": "Result saved successfully", "result_id": result_doc["result_id"]}
+
+@api_router.get("/results/user")
+async def get_user_results(
+    exercise_id: Optional[str] = None,
+    limit: int = 10,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Get user's results, optionally filtered by exercise.
+    """
+    query = {"user_id": user["user_id"]}
+    if exercise_id:
+        query["exercise_id"] = exercise_id
+    
+    results = await db.user_results.find(
+        query,
+        {"_id": 0}
+    ).sort("created_at", -1).limit(limit).to_list(limit)
+    
+    return results
+
+# ============================================================================
+# LEADERBOARD ROUTES
+# ============================================================================
+
+@api_router.get("/leaderboard/{exercise_id}")
+async def get_leaderboard(
+    exercise_id: str,
+    limit: int = 10
+):
+    """
+    Get leaderboard for specific exercise.
+    Returns top players by best score (lowest time).
+    """
+    # Aggregate to get best score per user
+    pipeline = [
+        {"$match": {"exercise_id": exercise_id}},
+        {"$group": {
+            "_id": "$user_id",
+            "best_time": {"$min": "$time"},
+            "total_games": {"$sum": 1}
+        }},
+        {"$sort": {"best_time": 1}},
+        {"$limit": limit}
+    ]
+    
+    leaderboard_data = await db.user_results.aggregate(pipeline).to_list(limit)
+    
+    # Enrich with user data and progress
+    leaderboard = []
+    for entry in leaderboard_data:
+        user_doc = await db.users.find_one(
+            {"user_id": entry["_id"]},
+            {"_id": 0, "user_id": 1, "name": 1, "picture": 1}
+        )
+        
+        progress_doc = await db.user_progress.find_one(
+            {"user_id": entry["_id"], "exercise_id": exercise_id},
+            {"_id": 0, "level": 1}
+        )
+        
+        if user_doc:
+            leaderboard.append({
+                "user_id": user_doc["user_id"],
+                "name": user_doc["name"],
+                "picture": user_doc.get("picture"),
+                "best_time": entry["best_time"],
+                "total_games": entry["total_games"],
+                "level": progress_doc["level"] if progress_doc else 1
+            })
+    
+    return leaderboard
+
+# ============================================================================
+# PROFILE ROUTES
+# ============================================================================
+
+@api_router.get("/profile/stats")
+async def get_profile_stats(user: Dict[str, Any] = Depends(get_current_user)):
+    """
+    Get user's statistics across all exercises.
+    """
+    user_id = user["user_id"]
+    
+    # Get all progress
+    progress_list = await db.user_progress.find(
+        {"user_id": user_id},
+        {"_id": 0}
+    ).to_list(100)
+    
+    # Get total results count
+    total_results = await db.user_results.count_documents({"user_id": user_id})
+    
+    return {
+        "user": user,
+        "progress": progress_list,
+        "total_games": total_results
+    }
+
+# ============================================================================
+# BASIC ROUTES
+# ============================================================================
+
 @api_router.get("/")
 async def root():
-    return {"message": "Hello World"}
+    return {"message": "Brain Training Platform API", "version": "1.0"}
 
-@api_router.post("/status", response_model=StatusCheck)
-async def create_status_check(input: StatusCheckCreate):
-    status_dict = input.model_dump()
-    status_obj = StatusCheck(**status_dict)
-    
-    # Convert to dict and serialize datetime to ISO string for MongoDB
-    doc = status_obj.model_dump()
-    doc['timestamp'] = doc['timestamp'].isoformat()
-    
-    _ = await db.status_checks.insert_one(doc)
-    return status_obj
-
-@api_router.get("/status", response_model=List[StatusCheck])
-async def get_status_checks():
-    # Exclude MongoDB's _id field from the query results
-    status_checks = await db.status_checks.find({}, {"_id": 0}).to_list(1000)
-    
-    # Convert ISO string timestamps back to datetime objects
-    for check in status_checks:
-        if isinstance(check['timestamp'], str):
-            check['timestamp'] = datetime.fromisoformat(check['timestamp'])
-    
-    return status_checks
+@api_router.get("/health")
+async def health_check():
+    return {"status": "healthy"}
 
 # Include the router in the main app
 app.include_router(api_router)
@@ -76,13 +555,6 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
-
-# Configure logging
-logging.basicConfig(
-    level=logging.INFO,
-    format='%(asctime)s - %(name)s - %(levelname)s - %(message)s'
-)
-logger = logging.getLogger(__name__)
 
 @app.on_event("shutdown")
 async def shutdown_db_client():
