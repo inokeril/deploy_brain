@@ -179,6 +179,9 @@ backend:
         - working: true
           agent: "testing"
           comment: "✅ ПОЛНОСТЬЮ ПРОТЕСТИРОВАНО: POST /api/spot-difference/start работает корректно для всех уровней сложности (easy=3, medium=5, hard=7 отличий). Возвращает game_id, image1/image2 (валидные base64), total_differences. AI-генерация изображений через Gemini работает (время генерации ~30-60 сек). POST /api/spot-difference/check работает. Аутентификация работает. Обработка ошибок корректна (400 для неверной сложности, 401 без авторизации, 404 для несуществующей игры). Логи показывают успешные вызовы LiteLLM/Gemini API без ошибок."
+        - working: true
+          agent: "testing"
+          comment: "✅ TEMPLATE STORAGE SYSTEM ПОЛНОСТЬЮ ПРОТЕСТИРОВАНА: Все 4 сценария работают корректно. Сценарий 1 (первый запуск): использует существующий template мгновенно (0.06с). Сценарий 2 (второй запуск): переиспользует тот же template мгновенно (0.06с), times_played увеличивается. Сценарий 3 (завершение игры): все отличия найдены, запись создана в user_solved_templates. Сценарий 4 (третий запуск): система обнаружила решённый template, сгенерировала НОВЫЙ template (29.24с). MongoDB коллекции: spot_difference_templates (2 template), user_solved_templates (1 запись), times_played корректно увеличивается. Логика исчерпания templates работает идеально."
 
 frontend:
   - task: "Authentication Flow"
