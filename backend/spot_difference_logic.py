@@ -50,20 +50,22 @@ def create_difference_zones(difficulty: str) -> List[Dict]:
     """
     Create zones where differences should appear.
     Returns list of zones with positions and descriptions.
+    Uses larger overlapping zones for better click detection.
     """
     diff_count = DIFFICULTY_SETTINGS[difficulty]["differences_count"]
     
-    # Define 9 zones (3x3 grid)
+    # Define 9 zones (3x3 grid) with larger areas and overlap
+    # Each zone now covers 40% instead of 33%, giving 7% overlap with neighbors
     zones = [
-        {"area": "top-left", "x_range": (0, 33), "y_range": (0, 33), "desc": "в левом верхнем углу"},
-        {"area": "top-center", "x_range": (33, 67), "y_range": (0, 33), "desc": "в верхней центральной части"},
-        {"area": "top-right", "x_range": (67, 100), "y_range": (0, 33), "desc": "в правом верхнем углу"},
-        {"area": "middle-left", "x_range": (0, 33), "y_range": (33, 67), "desc": "в левой части по центру"},
-        {"area": "middle-center", "x_range": (33, 67), "y_range": (33, 67), "desc": "в центре"},
-        {"area": "middle-right", "x_range": (67, 100), "y_range": (33, 67), "desc": "в правой части по центру"},
-        {"area": "bottom-left", "x_range": (0, 33), "y_range": (67, 100), "desc": "в левом нижнем углу"},
-        {"area": "bottom-center", "x_range": (33, 67), "y_range": (67, 100), "desc": "в нижней центральной части"},
-        {"area": "bottom-right", "x_range": (67, 100), "y_range": (67, 100), "desc": "в правом нижнем углу"}
+        {"area": "top-left", "x_range": (0, 40), "y_range": (0, 40), "desc": "в левом верхнем углу"},
+        {"area": "top-center", "x_range": (30, 70), "y_range": (0, 40), "desc": "в верхней центральной части"},
+        {"area": "top-right", "x_range": (60, 100), "y_range": (0, 40), "desc": "в правом верхнем углу"},
+        {"area": "middle-left", "x_range": (0, 40), "y_range": (30, 70), "desc": "в левой части по центру"},
+        {"area": "middle-center", "x_range": (30, 70), "y_range": (30, 70), "desc": "в центре"},
+        {"area": "middle-right", "x_range": (60, 100), "y_range": (30, 70), "desc": "в правой части по центру"},
+        {"area": "bottom-left", "x_range": (0, 40), "y_range": (60, 100), "desc": "в левом нижнем углу"},
+        {"area": "bottom-center", "x_range": (30, 70), "y_range": (60, 100), "desc": "в нижней центральной части"},
+        {"area": "bottom-right", "x_range": (60, 100), "y_range": (60, 100), "desc": "в правом нижнем углу"}
     ]
     
     # Shuffle and select required number of zones
