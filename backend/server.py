@@ -581,27 +581,79 @@ async def start_spot_difference_game(
 ):
     """
     Start a new spot the difference game.
-    Generates two images with differences.
+    Uses existing templates if available, generates new if needed.
     """
     difficulty = request.difficulty
+    user_id = user["user_id"]
     
     if difficulty not in DIFFICULTY_SETTINGS:
         raise HTTPException(status_code=400, detail="Invalid difficulty level")
     
     try:
-        # Generate game
-        logger.info(f"Generating spot difference game for user {user['user_id']}, difficulty: {difficulty}")
-        game_data = await generate_spot_difference_game(difficulty)
+        # Step 1: Get list of templates user has already solved
+        solved_templates = await db.user_solved_templates.find(
+            {"user_id": user_id, "difficulty": difficulty},
+            {"template_id": 1, "_id": 0}
+        ).to_list(1000)
         
-        # Save game to database
+        solved_template_ids = [t["template_id"] for t in solved_templates]
+        
+        # Step 2: Find an unsolved template with this difficulty
+        query = {"difficulty": difficulty}
+        if solved_template_ids:
+            query["template_id"] = {"$nin": solved_template_ids}
+        
+        available_templates = await db.spot_difference_templates.find(
+            query,
+            {"_id": 0}
+        ).to_list(100)
+        
+        template_data = None
+        
+        if available_templates:
+            # Use existing template - pick random one
+            import random
+            template_data = random.choice(available_templates)
+            logger.info(f"Using existing template {template_data['template_id']} for user {user_id}")
+            
+            # Increment times_played
+            await db.spot_difference_templates.update_one(
+                {"template_id": template_data["template_id"]},
+                {"$inc": {"times_played": 1}}
+            )
+        else:
+            # No available templates - generate new one
+            logger.info(f"No available templates for difficulty {difficulty}, generating new one for user {user_id}")
+            game_data = await generate_spot_difference_game(difficulty)
+            
+            # Save as template
+            template_doc = {
+                "template_id": game_data["game_id"],  # Use same ID
+                "difficulty": difficulty,
+                "theme": game_data["theme"],
+                "image1": game_data["image1"],
+                "image2": game_data["image2"],
+                "differences": game_data["differences"],
+                "total_differences": game_data["total_differences"],
+                "times_played": 1,
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            
+            await db.spot_difference_templates.insert_one(template_doc)
+            template_data = template_doc
+            logger.info(f"New template {template_doc['template_id']} saved to database")
+        
+        # Step 3: Create game instance for this user
+        game_id = f"game_{uuid.uuid4().hex[:12]}"
         game_doc = {
-            "game_id": game_data["game_id"],
-            "user_id": user["user_id"],
+            "game_id": game_id,
+            "user_id": user_id,
+            "template_id": template_data["template_id"],
             "difficulty": difficulty,
-            "theme": game_data["theme"],
-            "differences": game_data["differences"],
+            "theme": template_data["theme"],
+            "differences": template_data["differences"],
             "found_count": 0,
-            "total_differences": game_data["total_differences"],
+            "total_differences": template_data["total_differences"],
             "completed": False,
             "start_time": datetime.now(timezone.utc).isoformat(),
             "end_time": None
@@ -609,19 +661,19 @@ async def start_spot_difference_game(
         
         await db.spot_difference_games.insert_one(game_doc)
         
-        # Return game data (without saving images in DB - too large)
+        # Return game data
         return {
-            "game_id": game_data["game_id"],
+            "game_id": game_id,
             "difficulty": difficulty,
-            "image1": game_data["image1"],
-            "image2": game_data["image2"],
-            "total_differences": game_data["total_differences"],
+            "image1": template_data["image1"],
+            "image2": template_data["image2"],
+            "total_differences": template_data["total_differences"],
             "found_count": 0
         }
         
     except Exception as e:
-        logger.error(f"Error generating spot difference game: {e}")
-        raise HTTPException(status_code=500, detail=f"Failed to generate game: {str(e)}")
+        logger.error(f"Error starting spot difference game: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to start game: {str(e)}")
 
 @api_router.post("/spot-difference/check")
 async def check_spot_difference_click(
