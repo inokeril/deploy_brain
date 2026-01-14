@@ -74,11 +74,13 @@ const SchulteGame = () => {
       if (currentNumber === gridSize * gridSize) {
         // Game completed
         setGameState('completed');
-        // Save best time
+        // Save best time locally
         const currentBest = bestTimes[gridSize];
         if (!currentBest || elapsedTime < currentBest) {
           setBestTimes(prev => ({ ...prev, [gridSize]: elapsedTime }));
         }
+        // Save result to backend
+        saveResult(elapsedTime);
         setTimeout(() => setShowResults(true), 500);
       } else {
         setCurrentNumber(currentNumber + 1);
