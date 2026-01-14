@@ -817,6 +817,106 @@ async def update_user_progress_for_spot_difference(user_id: str, time: float, di
         await db.user_progress.insert_one(progress_doc)
 
 # ============================================================================
+# REACTION TIME GAME ROUTES
+# ============================================================================
+
+class ReactionSaveRequest(BaseModel):
+    difficulty: str  # easy, medium, hard
+    attempts: List[float]  # Array of reaction times in milliseconds
+    average_time: float
+    best_time: float
+
+@api_router.post("/reaction/save")
+async def save_reaction_result(
+    request: ReactionSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """
+    Save reaction time game result.
+    """
+    user_id = user["user_id"]
+    
+    # Validate difficulty
+    if request.difficulty not in ['easy', 'medium', 'hard']:
+        raise HTTPException(status_code=400, detail="Invalid difficulty level")
+    
+    try:
+        # Save result
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "exercise_id": "reaction",
+            "score": len(request.attempts),  # Number of attempts
+            "time": request.average_time,  # Average reaction time (lower is better)
+            "difficulty": request.difficulty,
+            "attempts": request.attempts,
+            "best_time": request.best_time,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        
+        # Update user progress
+        await update_user_progress_for_reaction(user_id, request.average_time, request.difficulty)
+        
+        return {
+            "message": "Result saved successfully",
+            "result_id": result_doc["result_id"]
+        }
+        
+    except Exception as e:
+        logger.error(f"Error saving reaction result: {e}")
+        raise HTTPException(status_code=500, detail=f"Failed to save result: {str(e)}")
+
+async def update_user_progress_for_reaction(user_id: str, avg_time: float, difficulty: str):
+    """
+    Update user progress for reaction time exercise.
+    For reaction time, lower is better, so we track best (minimum) time.
+    """
+    exercise_id = "reaction"
+    
+    progress = await db.user_progress.find_one(
+        {"user_id": user_id, "exercise_id": exercise_id},
+        {"_id": 0}
+    )
+    
+    if progress:
+        # Update existing progress
+        total_games = progress["total_games"] + 1
+        # For reaction time, best_score is MINIMUM time (lower is better)
+        best_score = min(avg_time, progress.get("best_score", avg_time))
+        
+        # Calculate average
+        current_avg = progress.get("average_score", avg_time)
+        new_avg = ((current_avg * progress["total_games"]) + avg_time) / total_games
+        
+        # Calculate level
+        level = 1 + (total_games // 10)
+        
+        await db.user_progress.update_one(
+            {"user_id": user_id, "exercise_id": exercise_id},
+            {"$set": {
+                "total_games": total_games,
+                "best_score": best_score,
+                "average_score": new_avg,
+                "level": level,
+                "last_played": datetime.now(timezone.utc).isoformat()
+            }}
+        )
+    else:
+        # Create new progress
+        progress_doc = {
+            "progress_id": f"progress_{uuid.uuid4().hex[:12]}",
+            "user_id": user_id,
+            "exercise_id": exercise_id,
+            "level": 1,
+            "total_games": 1,
+            "best_score": avg_time,
+            "average_score": avg_time,
+            "last_played": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_progress.insert_one(progress_doc)
+
+# ============================================================================
 # BASIC ROUTES
 # ============================================================================
 
