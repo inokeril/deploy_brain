@@ -2,7 +2,7 @@ import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
-import { Clock, Trophy, RotateCcw, CheckCircle2 } from 'lucide-react';
+import { Clock, Trophy, RotateCcw, CheckCircle2, ArrowLeft } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 const CatchLetterGame = ({ difficulty, settings, onBack }) => {
@@ -21,45 +21,54 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
   const gameAreaRef = useRef(null);
   const lastUpdateRef = useRef(Date.now());
   const inputRef = useRef(null);
-  const missedIdsRef = useRef(new Set()); // Track already missed letters
+  const missedIdsRef = useRef(new Set());
+  const gameActiveRef = useRef(false);
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
 
   useEffect(() => {
     return () => {
+      gameActiveRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
       if (spawnRef.current) clearInterval(spawnRef.current);
       if (animationRef.current) cancelAnimationFrame(animationRef.current);
     };
   }, []);
 
+  // Keyboard handler
   useEffect(() => {
-    if (gameState === 'playing') {
-      const handleKeyPress = (e) => {
-        const key = e.key.toUpperCase();
-        const matchingLetter = letters.find(l => l.char === key && !l.caught && !l.missed);
-        
-        if (matchingLetter) {
-          setScore(prev => prev + 1);
+    if (gameState !== 'playing') return;
+    
+    const handleKeyPress = (e) => {
+      if (!gameActiveRef.current) return;
+      
+      const key = e.key.toUpperCase();
+      
+      setLetters(prev => {
+        const matchIndex = prev.findIndex(l => l.char === key && !l.caught && !l.missed);
+        if (matchIndex !== -1) {
+          setScore(s => s + 1);
           setFeedback({ type: 'correct', char: key });
-          setLetters(prev => prev.map(l => 
-            l.id === matchingLetter.id ? { ...l, caught: true } : l
-          ));
-          
           setTimeout(() => setFeedback(null), 300);
+          
+          return prev.map((l, i) => 
+            i === matchIndex ? { ...l, caught: true } : l
+          );
         }
-      };
+        return prev;
+      });
+    };
 
-      window.addEventListener('keydown', handleKeyPress);
-      return () => window.removeEventListener('keydown', handleKeyPress);
-    }
-  }, [gameState, letters]);
+    window.addEventListener('keydown', handleKeyPress);
+    return () => window.removeEventListener('keydown', handleKeyPress);
+  }, [gameState]);
 
   const spawnLetter = useCallback(() => {
+    if (!gameActiveRef.current) return;
+    
     setLetters(prev => {
-      if (prev.filter(l => !l.caught && !l.missed).length >= settings.maxLetters) {
-        return prev;
-      }
+      const activeLetters = prev.filter(l => !l.caught && !l.missed);
+      if (activeLetters.length >= settings.maxLetters) return prev;
 
       const char = settings.letters[Math.floor(Math.random() * settings.letters.length)];
       const x = Math.random() * 70 + 15;
@@ -77,51 +86,62 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
   }, [settings.letters, settings.maxLetters]);
 
   const updateLetters = useCallback(() => {
+    if (!gameActiveRef.current) return;
+    
     const now = Date.now();
-    const delta = (now - lastUpdateRef.current) / 16.67;
+    const delta = Math.min((now - lastUpdateRef.current) / 16.67, 3); // Cap delta to prevent jumps
     lastUpdateRef.current = now;
 
     setLetters(prev => {
+      let missCount = 0;
+      
       const updated = prev.map(letter => {
         if (letter.caught || letter.missed) return letter;
         
-        const newY = letter.y + (settings.speed * 0.5 * delta);
+        const newY = letter.y + (settings.speed * 0.4 * delta);
         
-        // Check if letter reached bottom and not already counted
         if (newY >= 85 && !missedIdsRef.current.has(letter.id)) {
           missedIdsRef.current.add(letter.id);
-          setMissed(m => m + 1);
+          missCount++;
           return { ...letter, y: newY, missed: true };
         }
         
         return { ...letter, y: newY };
       });
       
-      return updated.filter(l => !(l.missed && l.y >= 100));
+      if (missCount > 0) {
+        setMissed(m => m + missCount);
+      }
+      
+      return updated.filter(l => !(l.missed && l.y >= 100) && !(l.caught));
     });
 
-    if (gameState === 'playing') {
+    if (gameActiveRef.current) {
       animationRef.current = requestAnimationFrame(updateLetters);
     }
-  }, [settings.speed, gameState]);
+  }, [settings.speed]);
 
   const handleMobileInput = (e) => {
+    if (!gameActiveRef.current) return;
+    
     const value = e.target.value.toUpperCase();
     if (value.length > 0) {
       const key = value[value.length - 1];
-      const matchingLetter = letters.find(l => l.char === key && !l.caught && !l.missed);
       
-      if (matchingLetter) {
-        setScore(prev => prev + 1);
-        setFeedback({ type: 'correct', char: key });
-        setLetters(prev => prev.map(l => 
-          l.id === matchingLetter.id ? { ...l, caught: true } : l
-        ));
-        
-        setTimeout(() => setFeedback(null), 300);
-      }
+      setLetters(prev => {
+        const matchIndex = prev.findIndex(l => l.char === key && !l.caught && !l.missed);
+        if (matchIndex !== -1) {
+          setScore(s => s + 1);
+          setFeedback({ type: 'correct', char: key });
+          setTimeout(() => setFeedback(null), 300);
+          
+          return prev.map((l, i) => 
+            i === matchIndex ? { ...l, caught: true } : l
+          );
+        }
+        return prev;
+      });
       
-      // Clear input after processing
       e.target.value = '';
     }
   };
@@ -133,8 +153,9 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
     setTimeLeft(settings.duration);
     setGameState('playing');
     lastUpdateRef.current = Date.now();
-    missedIdsRef.current = new Set(); // Reset missed tracking
+    missedIdsRef.current = new Set();
     letterIdRef.current = 0;
+    gameActiveRef.current = true;
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -149,11 +170,11 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
     spawnRef.current = setInterval(spawnLetter, settings.spawnInterval);
     animationRef.current = requestAnimationFrame(updateLetters);
     
-    // Focus hidden input for mobile keyboard
     setTimeout(() => inputRef.current?.focus(), 100);
   };
 
   const endGame = async () => {
+    gameActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     if (spawnRef.current) clearInterval(spawnRef.current);
     if (animationRef.current) cancelAnimationFrame(animationRef.current);
@@ -192,6 +213,16 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
     return (
       <Card className="max-w-4xl mx-auto">
         <CardContent className="py-12 sm:py-24 text-center px-4">
+          {/* Back button */}
+          <Button 
+            onClick={onBack} 
+            variant="ghost" 
+            className="absolute top-4 left-4 text-gray-600 hover:text-gray-900"
+          >
+            <ArrowLeft className="w-5 h-5 mr-1" />
+            Назад
+          </Button>
+          
           <div className="text-5xl sm:text-6xl mb-4 sm:mb-6">🔤</div>
           <h3 className="text-xl sm:text-2xl font-bold mb-4">Поймай букву</h3>
           <p className="text-gray-600 mb-6 sm:mb-8 max-w-md mx-auto text-sm sm:text-base">
@@ -238,27 +269,30 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
             ref={inputRef}
             type="text"
             className="absolute opacity-0 pointer-events-none"
+            style={{ position: 'fixed', top: '-100px' }}
             onChange={handleMobileInput}
             autoComplete="off"
             autoCapitalize="characters"
+            autoCorrect="off"
           />
           
           <div 
             ref={gameAreaRef}
-            className="relative bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg overflow-hidden cursor-pointer" 
+            className="relative bg-gradient-to-b from-blue-100 to-purple-100 rounded-lg overflow-hidden cursor-pointer" 
             style={{ height: '350px' }}
             onClick={focusInput}
           >
             {/* Bottom danger zone indicator */}
             <div className="absolute bottom-0 left-0 right-0 h-12 sm:h-16 bg-gradient-to-t from-red-200/50 to-transparent pointer-events-none" />
             
+            {/* Falling letters */}
             {letters.map(letter => {
               if (letter.missed || letter.caught) return null;
               
               return (
                 <div
                   key={letter.id}
-                  className="absolute text-3xl sm:text-5xl font-bold select-none"
+                  className="absolute text-3xl sm:text-5xl font-bold select-none transition-none"
                   style={{
                     left: `${letter.x}%`,
                     top: `${letter.y}%`,
@@ -272,6 +306,7 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
               );
             })}
             
+            {/* Success feedback */}
             {feedback && (
               <div className="absolute inset-0 flex items-center justify-center pointer-events-none z-50">
                 <div className="animate-ping">
@@ -280,6 +315,7 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
               </div>
             )}
 
+            {/* Initial message */}
             {gameState === 'playing' && letters.length === 0 && (
               <div className="absolute inset-0 flex items-center justify-center text-gray-400">
                 <p className="text-sm sm:text-lg">Приготовьтесь...</p>
@@ -292,7 +328,7 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
                 variant="outline" 
                 size="sm" 
                 onClick={focusInput}
-                className="bg-white/80 text-xs sm:text-sm"
+                className="bg-white/90 text-xs sm:text-sm shadow-md"
               >
                 ⌨️ Нажмите для клавиатуры
               </Button>
@@ -300,7 +336,7 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
           </div>
           
           <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
-            💡 Нажимайте на игровое поле, чтобы открыть клавиатуру
+            💡 Нажмите на игровое поле или кнопку, чтобы открыть клавиатуру
           </div>
         </CardContent>
       </Card>
