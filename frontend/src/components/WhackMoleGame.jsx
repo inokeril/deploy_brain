@@ -190,6 +190,13 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
     setMoles(prev => {
       if (!prev[holeIndex]?.visible || prev[holeIndex]?.hit) return prev;
       
+      const moleId = prev[holeIndex]?.moleId;
+      
+      // Mark as counted in ref to prevent miss counting
+      if (moleId && moleStateRef.current[moleId]) {
+        moleStateRef.current[moleId].counted = true;
+      }
+      
       // Clear the timeout for this mole
       if (moleTimeoutsRef.current[holeIndex]) {
         clearTimeout(moleTimeoutsRef.current[holeIndex]);
@@ -199,7 +206,8 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       
       // Hide mole after hit animation
       setTimeout(() => {
-        setMoles(p => ({ ...p, [holeIndex]: { visible: false, hit: false } }));
+        setMoles(p => ({ ...p, [holeIndex]: { visible: false, hit: false, moleId: null } }));
+        if (moleId) delete moleStateRef.current[moleId];
       }, 300);
       
       return { ...prev, [holeIndex]: { ...prev[holeIndex], hit: true } };
@@ -213,6 +221,7 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
     setTotalSpawned(0);
     setTimeLeft(settings.duration);
     setGameState('playing');
+    moleStateRef.current = {};
     moleTimeoutsRef.current = {};
     
     timerRef.current = setInterval(() => {
