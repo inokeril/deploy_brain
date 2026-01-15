@@ -4,9 +4,10 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
-import { Tabs, TabsContent, TabsList, TabsTrigger } from '@/components/ui/tabs';
+import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from '@/components/ui/select';
 import { Trophy, Medal, Award, Crown } from 'lucide-react';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTelegram } from '@/contexts/TelegramContext';
 
 const getRankIcon = (rank) => {
   switch (rank) {
@@ -34,58 +35,71 @@ const getRankColor = (rank) => {
   }
 };
 
-const LeaderboardRow = ({ player, rank, isCurrentUser }) => {
+const LeaderboardRow = ({ player, rank, isCurrentUser, isTelegram, themeParams }) => {
+  const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
+  const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
   return (
     <div
-      className={`flex items-center justify-between p-4 rounded-lg transition-colors ${
-        isCurrentUser ? 'bg-purple-50 border-2 border-purple-200' : 'hover:bg-gray-50'
+      className={`flex items-center justify-between p-3 sm:p-4 rounded-lg transition-colors ${
+        isCurrentUser 
+          ? isTelegram 
+            ? 'border-2' 
+            : 'bg-purple-50 border-2 border-purple-200' 
+          : isTelegram ? '' : 'hover:bg-gray-50'
       }`}
+      style={isCurrentUser && isTelegram ? {
+        backgroundColor: `${themeParams?.button_color}20`,
+        borderColor: themeParams?.button_color
+      } : undefined}
     >
-      <div className="flex items-center space-x-4 flex-1">
+      <div className="flex items-center space-x-2 sm:space-x-4 flex-1 min-w-0">
         {/* Rank */}
-        <div className="w-12 flex items-center justify-center">
+        <div className="w-8 sm:w-12 flex items-center justify-center flex-shrink-0">
           {rank <= 3 ? (
-            <div className={`w-10 h-10 rounded-full ${getRankColor(rank)} flex items-center justify-center text-white font-bold`}>
+            <div className={`w-8 h-8 sm:w-10 sm:h-10 rounded-full ${getRankColor(rank)} flex items-center justify-center text-white font-bold text-sm sm:text-base`}>
               {rank}
             </div>
           ) : (
-            <span className="text-lg font-semibold text-gray-600">#{rank}</span>
+            <span className="text-base sm:text-lg font-semibold" style={hintStyle}>#{rank}</span>
           )}
         </div>
 
-        {/* Rank Icon */}
-        <div className="w-6">
+        {/* Rank Icon - hidden on mobile */}
+        <div className="hidden sm:block w-6 flex-shrink-0">
           {getRankIcon(rank)}
         </div>
 
         {/* Avatar and Name */}
-        <div className="flex items-center space-x-3 flex-1">
-          <Avatar className="h-10 w-10">
+        <div className="flex items-center space-x-2 sm:space-x-3 flex-1 min-w-0">
+          <Avatar className="h-8 w-8 sm:h-10 sm:w-10 flex-shrink-0">
             <AvatarImage src={player.picture} alt={player.name} />
-            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white">
+            <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white text-xs sm:text-base">
               {player.name?.charAt(0).toUpperCase() || 'U'}
             </AvatarFallback>
           </Avatar>
           <div className="flex-1 min-w-0">
-            <p className="font-medium text-gray-900 truncate">
+            <p className="font-medium truncate text-sm sm:text-base" style={textStyle}>
               {player.name}
               {isCurrentUser && (
-                <Badge className="ml-2 bg-purple-600 text-white">Вы</Badge>
+                <Badge className="ml-1 sm:ml-2 bg-purple-600 text-white text-xs">Вы</Badge>
               )}
             </p>
-            <p className="text-sm text-gray-500">Уровень {player.level}</p>
+            <p className="text-xs sm:text-sm" style={hintStyle}>Ур. {player.level}</p>
           </div>
         </div>
 
         {/* Stats */}
-        <div className="hidden sm:flex items-center space-x-8 text-sm">
+        <div className="flex items-center space-x-2 sm:space-x-6 text-xs sm:text-sm flex-shrink-0">
           <div className="text-center">
-            <p className="text-gray-600">Лучшее время</p>
-            <p className="font-bold text-purple-600">{player.best_time.toFixed(2)}с</p>
+            <p style={hintStyle} className="hidden sm:block">Лучшее</p>
+            <p className="font-bold" style={{ color: isTelegram ? themeParams?.accent_text_color : '#9333ea' }}>
+              {player.best_time.toFixed(1)}с
+            </p>
           </div>
-          <div className="text-center">
-            <p className="text-gray-600">Игр</p>
-            <p className="font-semibold text-gray-900">{player.total_games}</p>
+          <div className="text-center hidden sm:block">
+            <p style={hintStyle}>Игр</p>
+            <p className="font-semibold" style={textStyle}>{player.total_games}</p>
           </div>
         </div>
       </div>
@@ -94,8 +108,9 @@ const LeaderboardRow = ({ player, rank, isCurrentUser }) => {
 };
 
 const Leaderboard = () => {
-  const { user } = useAuth();
-  const [selectedExercise, setSelectedExercise] = useState('schulte');
+  const { user, isTelegram } = useAuth();
+  const { themeParams, hapticImpact } = useTelegram();
+  const [selectedExercise, setSelectedExercise] = useState('');
   const [leaderboardData, setLeaderboardData] = useState([]);
   const [loading, setLoading] = useState(false);
   const [limit, setLimit] = useState(10);
@@ -119,6 +134,10 @@ const Leaderboard = () => {
       if (response.ok) {
         const data = await response.json();
         setExercises(data);
+        // Auto-select first exercise
+        if (data.length > 0 && !selectedExercise) {
+          setSelectedExercise(data[0].exercise_id);
+        }
       }
     } catch (error) {
       console.error('Failed to fetch exercises:', error);
@@ -147,63 +166,92 @@ const Leaderboard = () => {
 
   const currentExercise = exercises.find(e => e.exercise_id === selectedExercise);
 
+  const bgStyle = isTelegram ? { backgroundColor: themeParams?.bg_color } : {};
+  const cardStyle = isTelegram ? { backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color } : {};
+  const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
+  const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+    <div className={`min-h-screen ${!isTelegram ? 'bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50' : ''}`} style={bgStyle}>
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
+        <div className="mb-4 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={textStyle}>
             Таблица лидеров 🏆
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-sm sm:text-lg" style={hintStyle}>
             Лучшие игроки по каждому упражнению
           </p>
         </div>
 
-        {/* Exercise Tabs */}
-        <Card className="mb-8">
-          <CardHeader>
-            <CardTitle>Выберите упражнение</CardTitle>
+        {/* Exercise Selection */}
+        <Card className="mb-4 sm:mb-8" style={cardStyle}>
+          <CardHeader className="pb-2 sm:pb-4">
+            <CardTitle className="text-base sm:text-xl" style={textStyle}>Выберите упражнение</CardTitle>
           </CardHeader>
           <CardContent>
-            <Tabs value={selectedExercise} onValueChange={setSelectedExercise}>
-              <TabsList className="grid grid-cols-2 md:grid-cols-5 w-full">
+            <Select 
+              value={selectedExercise} 
+              onValueChange={(value) => {
+                if (isTelegram) hapticImpact?.('light');
+                setSelectedExercise(value);
+              }}
+            >
+              <SelectTrigger 
+                className="w-full"
+                style={isTelegram ? {
+                  backgroundColor: themeParams?.bg_color,
+                  color: themeParams?.text_color,
+                  borderColor: themeParams?.hint_color
+                } : undefined}
+              >
+                <SelectValue placeholder="Выберите упражнение" />
+              </SelectTrigger>
+              <SelectContent
+                style={isTelegram ? {
+                  backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color,
+                  color: themeParams?.text_color
+                } : undefined}
+              >
                 {exercises.map((exercise) => (
-                  <TabsTrigger key={exercise.exercise_id} value={exercise.exercise_id}>
-                    {exercise.name.split(' ')[0]}
-                  </TabsTrigger>
+                  <SelectItem key={exercise.exercise_id} value={exercise.exercise_id}>
+                    {exercise.name}
+                  </SelectItem>
                 ))}
-              </TabsList>
-            </Tabs>
+              </SelectContent>
+            </Select>
           </CardContent>
         </Card>
 
         {/* Leaderboard */}
-        <Card>
-          <CardHeader>
+        <Card style={cardStyle}>
+          <CardHeader className="pb-2 sm:pb-4">
             <div className="flex items-center justify-between">
               <div>
-                <CardTitle className="text-2xl mb-1">
+                <CardTitle className="text-lg sm:text-2xl mb-1" style={textStyle}>
                   {currentExercise?.name || 'Загрузка...'}
                 </CardTitle>
-                <p className="text-sm text-gray-600">
+                <p className="text-xs sm:text-sm" style={hintStyle}>
                   {currentExercise?.description}
                 </p>
               </div>
-              <Trophy className="w-12 h-12 text-yellow-500" />
+              <Trophy className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 flex-shrink-0" />
             </div>
           </CardHeader>
           <CardContent>
             {loading ? (
               <div className="flex items-center justify-center py-12">
-                <div className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4 border-purple-600"></div>
+                <div 
+                  className="animate-spin rounded-full h-12 w-12 border-t-4 border-b-4"
+                  style={{ borderColor: themeParams?.button_color || '#9333ea' }}
+                ></div>
               </div>
             ) : leaderboardData.length === 0 ? (
               <div className="text-center py-12">
-                <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Пока нет результатов</p>
-                <p className="text-sm text-gray-500">
+                <Trophy className="w-16 h-16 mx-auto mb-4" style={{ color: themeParams?.hint_color || '#d1d5db' }} />
+                <p style={textStyle} className="mb-2">Пока нет результатов</p>
+                <p className="text-sm" style={hintStyle}>
                   Станьте первым в таблице лидеров!
                 </p>
               </div>
@@ -215,6 +263,8 @@ const Leaderboard = () => {
                     player={player}
                     rank={index + 1}
                     isCurrentUser={player.user_id === user?.user_id}
+                    isTelegram={isTelegram}
+                    themeParams={themeParams}
                   />
                 ))}
 
@@ -222,7 +272,10 @@ const Leaderboard = () => {
                 {limit === 10 && leaderboardData.length === 10 && (
                   <div className="pt-4">
                     <Button
-                      onClick={() => setLimit(100)}
+                      onClick={() => {
+                        if (isTelegram) hapticImpact?.('light');
+                        setLimit(100);
+                      }}
                       variant="outline"
                       className="w-full"
                     >
@@ -234,7 +287,10 @@ const Leaderboard = () => {
                 {limit === 100 && (
                   <div className="pt-4">
                     <Button
-                      onClick={() => setLimit(10)}
+                      onClick={() => {
+                        if (isTelegram) hapticImpact?.('light');
+                        setLimit(10);
+                      }}
                       variant="outline"
                       className="w-full"
                     >
@@ -247,31 +303,33 @@ const Leaderboard = () => {
           </CardContent>
         </Card>
 
-        {/* Stats Card */}
-        <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mt-8">
-          <Card>
-            <CardContent className="pt-6">
+        {/* Stats Cards */}
+        <div className="grid grid-cols-3 gap-2 sm:gap-4 mt-4 sm:mt-8">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6 px-2 sm:px-6">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Всего игроков</p>
-                <p className="text-3xl font-bold text-purple-600">{leaderboardData.length}</p>
-              </div>
-            </CardContent>
-          </Card>
-          <Card>
-            <CardContent className="pt-6">
-              <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Лучший результат</p>
-                <p className="text-3xl font-bold text-blue-600">
-                  {leaderboardData.length > 0 ? `${leaderboardData[0].best_time.toFixed(2)}с` : '--'}
+                <p className="text-xs sm:text-sm mb-1" style={hintStyle}>Игроков</p>
+                <p className="text-xl sm:text-3xl font-bold" style={{ color: themeParams?.accent_text_color || '#9333ea' }}>
+                  {leaderboardData.length}
                 </p>
               </div>
             </CardContent>
           </Card>
-          <Card>
-            <CardContent className="pt-6">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6 px-2 sm:px-6">
               <div className="text-center">
-                <p className="text-sm text-gray-600 mb-1">Ваша позиция</p>
-                <p className="text-3xl font-bold text-pink-600">
+                <p className="text-xs sm:text-sm mb-1" style={hintStyle}>Лучший</p>
+                <p className="text-xl sm:text-3xl font-bold" style={{ color: themeParams?.link_color || '#3b82f6' }}>
+                  {leaderboardData.length > 0 ? `${leaderboardData[0].best_time.toFixed(1)}с` : '--'}
+                </p>
+              </div>
+            </CardContent>
+          </Card>
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6 px-2 sm:px-6">
+              <div className="text-center">
+                <p className="text-xs sm:text-sm mb-1" style={hintStyle}>Вы</p>
+                <p className="text-xl sm:text-3xl font-bold" style={{ color: '#ec4899' }}>
                   {leaderboardData.findIndex(p => p.user_id === user?.user_id) + 1 || '--'}
                 </p>
               </div>

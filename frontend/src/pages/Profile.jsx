@@ -4,54 +4,68 @@ import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Avatar, AvatarFallback, AvatarImage } from '@/components/ui/avatar';
 import { Badge } from '@/components/ui/badge';
 import { useAuth } from '@/contexts/AuthContext';
+import { useTelegram } from '@/contexts/TelegramContext';
 import { 
   Trophy, 
   TrendingUp, 
   Calendar, 
   Target,
   Grid3x3,
-  Clock,
   Award
 } from 'lucide-react';
 
-const ProfileStat = ({ icon: Icon, label, value, color }) => (
-  <div className="flex items-center space-x-3">
-    <div className={`w-10 h-10 rounded-lg ${color} flex items-center justify-center`}>
-      <Icon className="w-5 h-5 text-white" />
-    </div>
-    <div>
-      <p className="text-sm text-gray-600">{label}</p>
-      <p className="text-xl font-bold text-gray-900">{value}</p>
-    </div>
-  </div>
-);
-
-const ExerciseProgress = ({ exercise, progress }) => {
-  const levelProgress = ((progress.total_games % 10) / 10) * 100;
+const ProfileStat = ({ icon: Icon, label, value, color, isTelegram, themeParams }) => {
+  const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+  const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
 
   return (
-    <Card>
+    <div className="flex items-center space-x-3">
+      <div className={`w-10 h-10 rounded-lg flex items-center justify-center`} style={{ backgroundColor: color }}>
+        <Icon className="w-5 h-5 text-white" />
+      </div>
+      <div>
+        <p className="text-sm" style={hintStyle}>{label}</p>
+        <p className="text-xl font-bold" style={textStyle}>{value}</p>
+      </div>
+    </div>
+  );
+};
+
+const ExerciseProgress = ({ exercise, progress, isTelegram, themeParams }) => {
+  const levelProgress = ((progress.total_games % 10) / 10) * 100;
+  const cardStyle = isTelegram ? { backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color } : {};
+  const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
+  const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
+  return (
+    <Card style={cardStyle}>
       <CardContent className="pt-6">
         <div className="flex items-center justify-between mb-4">
           <div>
-            <h4 className="font-semibold text-gray-900">{exercise.name}</h4>
-            <p className="text-sm text-gray-600">Уровень {progress.level}</p>
+            <h4 className="font-semibold" style={textStyle}>{exercise.name}</h4>
+            <p className="text-sm" style={hintStyle}>Уровень {progress.level}</p>
           </div>
-          <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+          <Badge 
+            className="text-white"
+            style={{ background: `linear-gradient(to right, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})` }}
+          >
             {progress.total_games} игр
           </Badge>
         </div>
 
         {/* Level Progress Bar */}
         <div className="mb-4">
-          <div className="flex justify-between text-xs text-gray-600 mb-1">
+          <div className="flex justify-between text-xs mb-1" style={hintStyle}>
             <span>Прогресс до уровня {progress.level + 1}</span>
             <span>{progress.total_games % 10}/10 игр</span>
           </div>
-          <div className="w-full bg-gray-200 rounded-full h-2">
+          <div className="w-full rounded-full h-2" style={{ backgroundColor: isTelegram ? themeParams?.hint_color + '40' : '#e5e7eb' }}>
             <div
-              className="bg-gradient-to-r from-purple-600 to-blue-600 h-2 rounded-full transition-all duration-300"
-              style={{ width: `${levelProgress}%` }}
+              className="h-2 rounded-full transition-all duration-300"
+              style={{ 
+                width: `${levelProgress}%`,
+                background: `linear-gradient(to right, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})`
+              }}
             />
           </div>
         </div>
@@ -59,21 +73,21 @@ const ExerciseProgress = ({ exercise, progress }) => {
         {/* Stats */}
         <div className="grid grid-cols-2 gap-4 text-sm">
           <div>
-            <p className="text-gray-600">Лучший результат</p>
-            <p className="font-bold text-purple-600">
+            <p style={hintStyle}>Лучший результат</p>
+            <p className="font-bold" style={{ color: themeParams?.accent_text_color || '#9333ea' }}>
               {progress.best_score ? `${progress.best_score.toFixed(2)}с` : '--'}
             </p>
           </div>
           <div>
-            <p className="text-gray-600">Средний результат</p>
-            <p className="font-bold text-blue-600">
+            <p style={hintStyle}>Средний результат</p>
+            <p className="font-bold" style={{ color: themeParams?.link_color || '#3b82f6' }}>
               {progress.average_score ? `${progress.average_score.toFixed(2)}с` : '--'}
             </p>
           </div>
         </div>
 
         {progress.last_played && (
-          <div className="mt-3 pt-3 border-t text-xs text-gray-500">
+          <div className="mt-3 pt-3 border-t text-xs" style={{ borderColor: isTelegram ? themeParams?.hint_color + '40' : undefined, color: themeParams?.hint_color || '#6b7280' }}>
             Последняя игра: {new Date(progress.last_played).toLocaleDateString('ru-RU')}
           </div>
         )}
@@ -83,7 +97,8 @@ const ExerciseProgress = ({ exercise, progress }) => {
 };
 
 const Profile = () => {
-  const { user } = useAuth();
+  const { user, isTelegram } = useAuth();
+  const { themeParams } = useTelegram();
   const [stats, setStats] = useState(null);
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -119,12 +134,20 @@ const Profile = () => {
     }
   };
 
+  const bgStyle = isTelegram ? { backgroundColor: themeParams?.bg_color } : {};
+  const cardStyle = isTelegram ? { backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color } : {};
+  const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
+  const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+      <div className={`min-h-screen ${!isTelegram ? 'bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50' : ''}`} style={bgStyle}>
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600"></div>
+          <div 
+            className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4"
+            style={{ borderColor: themeParams?.button_color || '#9333ea' }}
+          ></div>
         </div>
       </div>
     );
@@ -138,33 +161,41 @@ const Profile = () => {
   const joinDate = user?.created_at ? new Date(user.created_at).toLocaleDateString('ru-RU') : '--';
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+    <div className={`min-h-screen ${!isTelegram ? 'bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50' : ''}`} style={bgStyle}>
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4 sm:py-8">
         {/* Profile Header */}
-        <Card className="mb-8">
+        <Card className="mb-4 sm:mb-8" style={cardStyle}>
           <CardContent className="pt-6">
             <div className="flex flex-col md:flex-row items-center md:items-start space-y-4 md:space-y-0 md:space-x-6">
               {/* Avatar */}
-              <Avatar className="h-24 w-24">
+              <Avatar className="h-20 w-20 sm:h-24 sm:w-24">
                 <AvatarImage src={user?.picture} alt={user?.name} />
-                <AvatarFallback className="bg-gradient-to-br from-purple-500 to-blue-500 text-white text-3xl">
+                <AvatarFallback 
+                  className="text-white text-2xl sm:text-3xl"
+                  style={{ background: `linear-gradient(135deg, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})` }}
+                >
                   {user?.name?.charAt(0).toUpperCase() || 'U'}
                 </AvatarFallback>
               </Avatar>
 
               {/* User Info */}
               <div className="flex-1 text-center md:text-left">
-                <h1 className="text-3xl font-bold text-gray-900 mb-2">{user?.name}</h1>
-                <p className="text-gray-600 mb-4">{user?.email}</p>
+                <h1 className="text-2xl sm:text-3xl font-bold mb-2" style={textStyle}>{user?.name}</h1>
+                <p className="mb-4" style={hintStyle}>
+                  {user?.telegram_username ? `@${user.telegram_username}` : user?.email}
+                </p>
                 
                 <div className="flex flex-wrap gap-2 justify-center md:justify-start">
-                  <Badge className="bg-gradient-to-r from-purple-600 to-blue-600 text-white">
+                  <Badge 
+                    className="text-white"
+                    style={{ background: `linear-gradient(to right, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})` }}
+                  >
                     <Trophy className="w-3 h-3 mr-1" />
                     Уровень {averageLevel}
                   </Badge>
-                  <Badge variant="outline">
+                  <Badge variant="outline" style={isTelegram ? { borderColor: themeParams?.hint_color, color: themeParams?.text_color } : undefined}>
                     <Calendar className="w-3 h-3 mr-1" />
                     С {joinDate}
                   </Badge>
@@ -175,58 +206,66 @@ const Profile = () => {
         </Card>
 
         {/* Stats Overview */}
-        <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-4 gap-4 mb-8">
-          <Card>
-            <CardContent className="pt-6">
+        <div className="grid grid-cols-2 lg:grid-cols-4 gap-2 sm:gap-4 mb-4 sm:mb-8">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6">
               <ProfileStat
                 icon={Target}
                 label="Всего игр"
                 value={totalGames}
-                color="bg-purple-500"
+                color={themeParams?.button_color || '#9333ea'}
+                isTelegram={isTelegram}
+                themeParams={themeParams}
               />
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="pt-6">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6">
               <ProfileStat
                 icon={Grid3x3}
-                label="Упражнений освоено"
+                label="Упражнений"
                 value={totalExercises}
-                color="bg-blue-500"
+                color={themeParams?.link_color || '#3b82f6'}
+                isTelegram={isTelegram}
+                themeParams={themeParams}
               />
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="pt-6">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6">
               <ProfileStat
                 icon={TrendingUp}
-                label="Средний уровень"
+                label="Ср. уровень"
                 value={averageLevel}
-                color="bg-pink-500"
+                color="#ec4899"
+                isTelegram={isTelegram}
+                themeParams={themeParams}
               />
             </CardContent>
           </Card>
           
-          <Card>
-            <CardContent className="pt-6">
+          <Card style={cardStyle}>
+            <CardContent className="pt-4 sm:pt-6">
               <ProfileStat
                 icon={Award}
                 label="Достижений"
                 value="Скоро"
-                color="bg-yellow-500"
+                color="#eab308"
+                isTelegram={isTelegram}
+                themeParams={themeParams}
               />
             </CardContent>
           </Card>
         </div>
 
         {/* Exercise Progress */}
-        <div className="mb-8">
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Прогресс по упражнениям</h2>
+        <div className="mb-4 sm:mb-8">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6" style={textStyle}>Прогресс по упражнениям</h2>
           
           {stats?.progress && stats.progress.length > 0 ? (
-            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+            <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
               {stats.progress.map((progress) => {
                 const exercise = exercises.find(e => e.exercise_id === progress.exercise_id);
                 if (!exercise) return null;
@@ -236,36 +275,38 @@ const Profile = () => {
                     key={progress.exercise_id}
                     exercise={exercise}
                     progress={progress}
+                    isTelegram={isTelegram}
+                    themeParams={themeParams}
                   />
                 );
               })}
             </div>
           ) : (
-            <Card>
+            <Card style={cardStyle}>
               <CardContent className="py-12 text-center">
-                <Grid3x3 className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-                <p className="text-gray-600 mb-2">Вы ещё не играли</p>
-                <p className="text-sm text-gray-500">
-                  Начните с упражнения "Таблицы Шульте"
+                <Grid3x3 className="w-16 h-16 mx-auto mb-4" style={{ color: themeParams?.hint_color || '#d1d5db' }} />
+                <p className="mb-2" style={textStyle}>Вы ещё не играли</p>
+                <p className="text-sm" style={hintStyle}>
+                  Начните с любого упражнения
                 </p>
               </CardContent>
             </Card>
           )}
         </div>
 
-        {/* Achievements Section (Coming Soon) */}
-        <Card>
+        {/* Achievements Section */}
+        <Card style={cardStyle}>
           <CardHeader>
-            <CardTitle className="flex items-center justify-between">
+            <CardTitle className="flex items-center justify-between" style={textStyle}>
               <span>Достижения</span>
-              <Badge className="bg-purple-600 text-white">Скоро</Badge>
+              <Badge style={{ backgroundColor: themeParams?.button_color || '#9333ea' }} className="text-white">Скоро</Badge>
             </CardTitle>
           </CardHeader>
           <CardContent>
             <div className="text-center py-8">
-              <Trophy className="w-16 h-16 text-gray-300 mx-auto mb-4" />
-              <p className="text-gray-600 mb-2">Система достижений в разработке</p>
-              <p className="text-sm text-gray-500">
+              <Trophy className="w-16 h-16 mx-auto mb-4" style={{ color: themeParams?.hint_color || '#d1d5db' }} />
+              <p className="mb-2" style={textStyle}>Система достижений в разработке</p>
+              <p className="text-sm" style={hintStyle}>
                 Скоро вы сможете получать награды за выполнение различных задач!
               </p>
             </div>
