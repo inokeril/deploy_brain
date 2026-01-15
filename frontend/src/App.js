@@ -15,6 +15,7 @@ import CatchLetterPage from "@/pages/CatchLetterPage";
 import WhackMolePage from "@/pages/WhackMolePage";
 import TypingPage from "@/pages/TypingPage";
 import SequencePage from "@/pages/SequencePage";
+import MathPage from "@/pages/MathPage";
 import Competitions from "@/pages/Competitions";
 import Leaderboard from "@/pages/Leaderboard";
 import Profile from "@/pages/Profile";
