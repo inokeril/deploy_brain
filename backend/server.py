@@ -715,19 +715,56 @@ async def get_leaderboard(
 ):
     """
     Get leaderboard for specific exercise.
-    Returns top players by best score (lowest time).
+    Different exercises have different sorting criteria:
+    - Time-based (schulte, stroop, sequence): lowest time is better
+    - Score-based (whack-mole, catch-letter, math): highest score is better
+    - WPM-based (typing): highest WPM is better
     """
-    # Aggregate to get best score per user
-    pipeline = [
-        {"$match": {"exercise_id": exercise_id}},
-        {"$group": {
-            "_id": "$user_id",
-            "best_time": {"$min": "$time"},
-            "total_games": {"$sum": 1}
-        }},
-        {"$sort": {"best_time": 1}},
-        {"$limit": limit}
-    ]
+    
+    # Define which exercises use which metric
+    score_based_exercises = ['whack-mole', 'catch-letter', 'math']
+    wpm_based_exercises = ['typing']
+    time_based_exercises = ['schulte', 'stroop', 'sequence', 'spot-difference']
+    
+    if exercise_id in score_based_exercises:
+        # For score-based games: higher score is better
+        pipeline = [
+            {"$match": {"exercise_id": exercise_id}},
+            {"$group": {
+                "_id": "$user_id",
+                "best_score": {"$max": "$score"},
+                "total_games": {"$sum": 1}
+            }},
+            {"$sort": {"best_score": -1}},  # Descending - higher is better
+            {"$limit": limit}
+        ]
+        score_field = "best_score"
+    elif exercise_id in wpm_based_exercises:
+        # For typing: higher WPM is better
+        pipeline = [
+            {"$match": {"exercise_id": exercise_id}},
+            {"$group": {
+                "_id": "$user_id",
+                "best_wpm": {"$max": "$score"},
+                "total_games": {"$sum": 1}
+            }},
+            {"$sort": {"best_wpm": -1}},  # Descending - higher is better
+            {"$limit": limit}
+        ]
+        score_field = "best_wpm"
+    else:
+        # For time-based games: lower time is better
+        pipeline = [
+            {"$match": {"exercise_id": exercise_id}},
+            {"$group": {
+                "_id": "$user_id",
+                "best_time": {"$min": "$time"},
+                "total_games": {"$sum": 1}
+            }},
+            {"$sort": {"best_time": 1}},  # Ascending - lower is better
+            {"$limit": limit}
+        ]
+        score_field = "best_time"
     
     leaderboard_data = await db.user_results.aggregate(pipeline).to_list(limit)
     
@@ -745,14 +782,25 @@ async def get_leaderboard(
         )
         
         if user_doc:
-            leaderboard.append({
+            leaderboard_entry = {
                 "user_id": user_doc["user_id"],
                 "name": user_doc["name"],
                 "picture": user_doc.get("picture"),
-                "best_time": entry["best_time"],
                 "total_games": entry["total_games"],
                 "level": progress_doc["level"] if progress_doc else 1
-            })
+            }
+            
+            # Add the appropriate score field
+            if score_field == "best_time":
+                leaderboard_entry["best_time"] = entry.get("best_time", 0)
+            elif score_field == "best_score":
+                leaderboard_entry["best_time"] = entry.get("best_score", 0)  # Use best_time field for compatibility
+                leaderboard_entry["best_score"] = entry.get("best_score", 0)
+            elif score_field == "best_wpm":
+                leaderboard_entry["best_time"] = entry.get("best_wpm", 0)  # Use best_time field for compatibility
+                leaderboard_entry["best_wpm"] = entry.get("best_wpm", 0)
+            
+            leaderboard.append(leaderboard_entry)
     
     return leaderboard
 
