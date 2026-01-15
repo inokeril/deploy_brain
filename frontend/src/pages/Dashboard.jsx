@@ -16,7 +16,8 @@ import {
   Palette,
   Type,
   Target,
-  Keyboard
+  Keyboard,
+  Brain
 } from 'lucide-react';
 
 const iconMap = {
@@ -29,6 +30,7 @@ const iconMap = {
   'type': Type,
   'target': Target,
   'keyboard': Keyboard,
+  'brain': Brain,
 };
 
 const difficultyColors = {
