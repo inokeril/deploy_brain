@@ -4,6 +4,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/com
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
 import Header from '@/components/Header';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { useAuth } from '@/contexts/AuthContext';
 import { 
   Grid3x3, 
   ListOrdered, 
@@ -45,34 +47,62 @@ const difficultyLabels = {
   hard: 'Сложно',
 };
 
-const ExerciseCard = ({ exercise, onPlay }) => {
+const ExerciseCard = ({ exercise, onPlay, isTelegram, themeParams, hapticImpact }) => {
   const Icon = iconMap[exercise.icon] || Grid3x3;
   const isAvailable = ['schulte', 'spot-difference', 'stroop', 'catch-letter', 'whack-mole', 'sequence', 'math', 'typing'].includes(exercise.exercise_id);
 
+  const handleClick = () => {
+    if (isTelegram && hapticImpact) {
+      hapticImpact('light');
+    }
+    onPlay(exercise.exercise_id);
+  };
+
+  const cardStyle = isTelegram ? {
+    backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color,
+  } : {};
+
+  const textStyle = isTelegram ? {
+    color: themeParams?.text_color,
+  } : {};
+
+  const hintStyle = isTelegram ? {
+    color: themeParams?.hint_color,
+  } : {};
+
   return (
-    <Card className={`group hover:shadow-lg transition-all duration-300 ${!isAvailable ? 'opacity-60' : ''}`}>
+    <Card 
+      className={`group hover:shadow-lg transition-all duration-300 ${!isAvailable ? 'opacity-60' : ''}`}
+      style={cardStyle}
+    >
       <CardHeader>
         <div className="flex items-start justify-between mb-2">
           <div className={`w-12 h-12 rounded-xl flex items-center justify-center ${
             isAvailable 
-              ? 'bg-gradient-to-br from-purple-500 to-blue-500 group-hover:scale-110' 
+              ? '' 
               : 'bg-gray-300'
-          } transition-transform`}>
+          } transition-transform group-hover:scale-110`}
+          style={isAvailable ? {
+            background: isTelegram 
+              ? `linear-gradient(135deg, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})`
+              : 'linear-gradient(135deg, #9333ea, #3b82f6)'
+          } : undefined}
+          >
             <Icon className="w-6 h-6 text-white" />
           </div>
           <Badge className={`${difficultyColors[exercise.difficulty]} border`}>
             {difficultyLabels[exercise.difficulty]}
           </Badge>
         </div>
-        <CardTitle className="text-xl">{exercise.name}</CardTitle>
-        <CardDescription className="text-sm">
+        <CardTitle className="text-xl" style={textStyle}>{exercise.name}</CardTitle>
+        <CardDescription className="text-sm" style={hintStyle}>
           {exercise.description}
         </CardDescription>
       </CardHeader>
       <CardContent>
         {isAvailable ? (
           <div className="space-y-3">
-            <div className="flex items-center justify-between text-sm text-gray-600">
+            <div className="flex items-center justify-between text-sm" style={hintStyle}>
               <div className="flex items-center space-x-2">
                 <Clock className="w-4 h-4" />
                 <span>Лучшее: --</span>
@@ -83,15 +113,21 @@ const ExerciseCard = ({ exercise, onPlay }) => {
               </div>
             </div>
             <Button 
-              onClick={() => onPlay(exercise.exercise_id)}
-              className="w-full bg-gradient-to-r from-purple-600 to-blue-600 hover:from-purple-700 hover:to-blue-700"
+              onClick={handleClick}
+              className="w-full"
+              style={{
+                background: isTelegram 
+                  ? `linear-gradient(to right, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})`
+                  : 'linear-gradient(to right, #9333ea, #3b82f6)',
+                color: themeParams?.button_text_color || '#ffffff'
+              }}
             >
               Играть
             </Button>
           </div>
         ) : (
           <div className="space-y-2">
-            <div className="flex items-center justify-center text-sm text-gray-500 py-2">
+            <div className="flex items-center justify-center text-sm py-2" style={hintStyle}>
               <span>Скоро доступно</span>
             </div>
             <Button disabled className="w-full">
@@ -106,6 +142,8 @@ const ExerciseCard = ({ exercise, onPlay }) => {
 
 const Dashboard = () => {
   const navigate = useNavigate();
+  const { user, isTelegram } = useAuth();
+  const { themeParams, colorScheme, hapticImpact } = useTelegram();
   const [exercises, setExercises] = useState([]);
   const [loading, setLoading] = useState(true);
   const [stats, setStats] = useState(null);
@@ -146,92 +184,133 @@ const Dashboard = () => {
   };
 
   const handlePlayExercise = (exerciseId) => {
-    if (exerciseId === 'schulte') {
-      navigate('/exercise/schulte');
-    } else if (exerciseId === 'spot-difference') {
-      navigate('/exercise/spot-difference');
-    } else if (exerciseId === 'stroop') {
-      navigate('/exercise/stroop');
-    } else if (exerciseId === 'catch-letter') {
-      navigate('/exercise/catch-letter');
-    } else if (exerciseId === 'whack-mole') {
-      navigate('/exercise/whack-mole');
-    } else if (exerciseId === 'sequence') {
-      navigate('/exercise/sequence');
-    } else if (exerciseId === 'math') {
-      navigate('/exercise/math');
-    } else if (exerciseId === 'typing') {
-      navigate('/exercise/typing');
+    const routes = {
+      'schulte': '/exercise/schulte',
+      'spot-difference': '/exercise/spot-difference',
+      'stroop': '/exercise/stroop',
+      'catch-letter': '/exercise/catch-letter',
+      'whack-mole': '/exercise/whack-mole',
+      'sequence': '/exercise/sequence',
+      'math': '/exercise/math',
+      'typing': '/exercise/typing',
+    };
+    
+    if (routes[exerciseId]) {
+      navigate(routes[exerciseId]);
     } else {
-      // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
     }
   };
 
+  // Styles for Telegram
+  const bgStyle = isTelegram ? {
+    backgroundColor: themeParams?.bg_color,
+  } : {};
+
+  const textStyle = isTelegram ? {
+    color: themeParams?.text_color,
+  } : {};
+
+  const hintStyle = isTelegram ? {
+    color: themeParams?.hint_color,
+  } : {};
+
+  const cardStyle = isTelegram ? {
+    backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color,
+  } : {};
+
   if (loading) {
     return (
-      <div className="min-h-screen bg-gray-50">
+      <div className={`min-h-screen ${!isTelegram ? 'bg-gray-50' : ''}`} style={bgStyle}>
         <Header />
         <div className="flex items-center justify-center h-[calc(100vh-4rem)]">
-          <div className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4 border-purple-600"></div>
+          <div 
+            className="animate-spin rounded-full h-16 w-16 border-t-4 border-b-4"
+            style={{ borderColor: themeParams?.button_color || '#9333ea' }}
+          ></div>
         </div>
       </div>
     );
   }
 
   return (
-    <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
+    <div 
+      className={`min-h-screen ${!isTelegram ? 'bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50' : ''}`}
+      style={bgStyle}
+    >
       <Header />
       
-      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-8">
+      <main className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-6 sm:py-8">
         {/* Welcome Section */}
-        <div className="mb-8">
-          <h1 className="text-4xl font-bold text-gray-900 mb-2">
-            Добро пожаловать! 👋
+        <div className="mb-6 sm:mb-8">
+          <h1 className="text-2xl sm:text-4xl font-bold mb-2" style={textStyle}>
+            {isTelegram && user ? `Привет, ${user.name?.split(' ')[0]}! 👋` : 'Добро пожаловать! 👋'}
           </h1>
-          <p className="text-lg text-gray-600">
+          <p className="text-base sm:text-lg" style={hintStyle}>
             Выберите упражнение и начните тренировку
           </p>
         </div>
 
         {/* Stats Cards */}
         {stats && stats.total_games > 0 && (
-          <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-8">
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Всего игр</p>
-                    <p className="text-3xl font-bold text-purple-600">{stats.total_games}</p>
+          <div className="grid grid-cols-3 gap-2 sm:gap-4 mb-6 sm:mb-8">
+            <Card style={cardStyle}>
+              <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row items-center sm:justify-between">
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs sm:text-sm" style={hintStyle}>Всего игр</p>
+                    <p 
+                      className="text-xl sm:text-3xl font-bold"
+                      style={{ color: themeParams?.accent_text_color || '#9333ea' }}
+                    >
+                      {stats.total_games}
+                    </p>
                   </div>
-                  <TrendingUp className="w-8 h-8 text-purple-600" />
+                  <TrendingUp 
+                    className="hidden sm:block w-8 h-8" 
+                    style={{ color: themeParams?.accent_text_color || '#9333ea' }}
+                  />
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Упражнений</p>
-                    <p className="text-3xl font-bold text-blue-600">{stats.progress?.length || 0}</p>
+            <Card style={cardStyle}>
+              <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row items-center sm:justify-between">
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs sm:text-sm" style={hintStyle}>Упражнений</p>
+                    <p 
+                      className="text-xl sm:text-3xl font-bold"
+                      style={{ color: themeParams?.link_color || '#3b82f6' }}
+                    >
+                      {stats.progress?.length || 0}
+                    </p>
                   </div>
-                  <Grid3x3 className="w-8 h-8 text-blue-600" />
+                  <Grid3x3 
+                    className="hidden sm:block w-8 h-8"
+                    style={{ color: themeParams?.link_color || '#3b82f6' }}
+                  />
                 </div>
               </CardContent>
             </Card>
-            <Card>
-              <CardContent className="pt-6">
-                <div className="flex items-center justify-between">
-                  <div>
-                    <p className="text-sm text-gray-600">Средний уровень</p>
-                    <p className="text-3xl font-bold text-pink-600">
+            <Card style={cardStyle}>
+              <CardContent className="pt-4 sm:pt-6 px-3 sm:px-6">
+                <div className="flex flex-col sm:flex-row items-center sm:justify-between">
+                  <div className="text-center sm:text-left">
+                    <p className="text-xs sm:text-sm" style={hintStyle}>Уровень</p>
+                    <p 
+                      className="text-xl sm:text-3xl font-bold"
+                      style={{ color: '#ec4899' }}
+                    >
                       {stats.progress?.length 
                         ? Math.round(stats.progress.reduce((sum, p) => sum + p.level, 0) / stats.progress.length)
                         : 1
                       }
                     </p>
                   </div>
-                  <Trophy className="w-8 h-8 text-pink-600" />
+                  <Trophy 
+                    className="hidden sm:block w-8 h-8"
+                    style={{ color: '#ec4899' }}
+                  />
                 </div>
               </CardContent>
             </Card>
@@ -240,33 +319,49 @@ const Dashboard = () => {
 
         {/* Exercises Grid */}
         <div>
-          <h2 className="text-2xl font-bold text-gray-900 mb-6">Доступные упражнения</h2>
-          <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
+          <h2 className="text-xl sm:text-2xl font-bold mb-4 sm:mb-6" style={textStyle}>
+            Доступные упражнения
+          </h2>
+          <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-4 sm:gap-6">
             {exercises.map((exercise) => (
               <ExerciseCard
                 key={exercise.exercise_id}
                 exercise={exercise}
                 onPlay={handlePlayExercise}
+                isTelegram={isTelegram}
+                themeParams={themeParams}
+                hapticImpact={hapticImpact}
               />
             ))}
           </div>
         </div>
 
         {/* Call to Action */}
-        <Card className="mt-8 bg-gradient-to-r from-purple-500 to-blue-500 border-0">
-          <CardContent className="pt-6">
-            <div className="flex flex-col md:flex-row items-center justify-between text-white">
-              <div className="mb-4 md:mb-0">
-                <h3 className="text-2xl font-bold mb-2">Тренируйтесь каждый день!</h3>
-                <p className="text-purple-100">
+        <Card 
+          className="mt-6 sm:mt-8 border-0"
+          style={{
+            background: isTelegram 
+              ? `linear-gradient(to right, ${themeParams?.button_color || '#9333ea'}, ${themeParams?.link_color || '#3b82f6'})`
+              : 'linear-gradient(to right, #9333ea, #3b82f6)'
+          }}
+        >
+          <CardContent className="pt-4 sm:pt-6">
+            <div className="flex flex-col sm:flex-row items-center justify-between text-white">
+              <div className="mb-4 sm:mb-0 text-center sm:text-left">
+                <h3 className="text-lg sm:text-2xl font-bold mb-1 sm:mb-2">Тренируйтесь каждый день!</h3>
+                <p className="text-sm sm:text-base opacity-90">
                   Регулярные тренировки улучшают внимание и скорость мышления
                 </p>
               </div>
               <Button 
-                onClick={() => navigate('/competitions')}
-                className="bg-white text-purple-600 hover:bg-purple-50"
+                onClick={() => {
+                  if (isTelegram) hapticImpact('light');
+                  navigate('/competitions');
+                }}
+                className="bg-white hover:bg-gray-100"
+                style={{ color: themeParams?.button_color || '#9333ea' }}
               >
-                Участвовать в соревнованиях
+                Соревнования
               </Button>
             </div>
           </CardContent>
