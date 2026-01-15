@@ -126,12 +126,16 @@ const MathGame = ({ difficulty, settings, onBack }) => {
     }
     
     // Show feedback briefly, then next problem
+    const feedbackDuration = isCorrect ? 300 : 800;
     setTimeout(() => {
       setFeedback(null);
       setUserAnswer('');
       setCurrentProblem(generateProblem());
-      inputRef.current?.focus();
-    }, isCorrect ? 300 : 800);
+      // Use requestAnimationFrame to ensure DOM is updated before focusing
+      requestAnimationFrame(() => {
+        inputRef.current?.focus();
+      });
+    }, feedbackDuration);
   };
 
   const handleKeyDown = (e) => {
