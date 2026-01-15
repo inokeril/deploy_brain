@@ -117,6 +117,18 @@ backend:
           agent: "main"
           comment: "Реализованы эндпоинты: POST /api/auth/session, GET /api/auth/me, POST /api/auth/logout. Интеграция с Emergent Auth API работает"
 
+  - task: "Telegram Authentication API"
+    implemented: true
+    working: true
+    file: "backend/server.py"
+    stuck_count: 0
+    priority: "high"
+    needs_retesting: false
+    status_history:
+        - working: true
+          agent: "testing"
+          comment: "✅ TELEGRAM AUTH ПОЛНОСТЬЮ ПРОТЕСТИРОВАНА: POST /api/auth/telegram корректно валидирует initData и возвращает 401 для невалидных данных. GET /api/auth/me правильно возвращает 401 без авторизации. GET /api/health возвращает {'status': 'healthy'}. GET /api/exercises работает корректно и возвращает 5 упражнений. TELEGRAM_BOT_TOKEN настроен. Все базовые эндпоинты аутентификации функционируют как ожидается. Валидация HMAC-SHA256 для Telegram WebApp работает."
+
   - task: "Exercises API"
     implemented: true
     working: true
