@@ -186,6 +186,9 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
   const handleRestart = () => {
     setShowResults(false);
     setGameState('idle');
+    setTypedText('');
+    typedTextRef.current = '';
+    gameEndedRef.current = false;
   };
 
   const renderText = () => {
