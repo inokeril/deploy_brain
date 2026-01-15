@@ -70,7 +70,7 @@ const StroopPage = () => {
       <div className="min-h-screen bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50">
         <Header />
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 py-4">
-          <Button variant="ghost" onClick={handleBackToDifficulty} className="mb-4">
+          <Button variant="outline" onClick={handleBackToDifficulty} className="mb-4 bg-white/90 hover:bg-white shadow-sm">
             <ArrowLeft className="w-4 h-4 mr-2" />
             Назад к выбору сложности
           </Button>
