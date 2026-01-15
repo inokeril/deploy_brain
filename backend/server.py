@@ -372,6 +372,122 @@ async def get_me(user: Dict[str, Any] = Depends(get_current_user)):
     """
     return user
 
+# ============================================================================
+# TELEGRAM AUTHENTICATION
+# ============================================================================
+
+@api_router.post("/auth/telegram")
+async def telegram_auth(request: TelegramAuthRequest, response: Response):
+    """
+    Authenticate user via Telegram WebApp initData.
+    Creates or updates user and returns session token.
+    """
+    try:
+        bot_token = os.environ.get('TELEGRAM_BOT_TOKEN')
+        if not bot_token:
+            logger.error("TELEGRAM_BOT_TOKEN not configured")
+            raise HTTPException(status_code=500, detail="Telegram auth not configured")
+        
+        # Validate initData
+        validated_data = validate_telegram_init_data(request.init_data, bot_token)
+        
+        if not validated_data:
+            raise HTTPException(status_code=401, detail="Invalid Telegram authentication")
+        
+        # Extract user data
+        tg_user = validated_data.get('user')
+        if not tg_user:
+            raise HTTPException(status_code=401, detail="No user data in Telegram auth")
+        
+        telegram_id = str(tg_user['id'])
+        first_name = tg_user.get('first_name', '')
+        last_name = tg_user.get('last_name', '')
+        username = tg_user.get('username', '')
+        photo_url = tg_user.get('photo_url', '')
+        
+        # Full name
+        full_name = f"{first_name} {last_name}".strip() or username or f"User {telegram_id}"
+        
+        # Check if user exists (by telegram_id)
+        existing_user = await db.users.find_one(
+            {"telegram_id": telegram_id},
+            {"_id": 0}
+        )
+        
+        if existing_user:
+            user_id = existing_user["user_id"]
+            # Update user data
+            await db.users.update_one(
+                {"user_id": user_id},
+                {"$set": {
+                    "name": full_name,
+                    "telegram_username": username,
+                    "picture": photo_url or existing_user.get("picture")
+                }}
+            )
+        else:
+            # Create new user
+            user_id = f"tg_{telegram_id}"
+            new_user = {
+                "user_id": user_id,
+                "telegram_id": telegram_id,
+                "telegram_username": username,
+                "email": f"{telegram_id}@telegram.user",  # Placeholder email
+                "name": full_name,
+                "picture": photo_url,
+                "auth_type": "telegram",
+                "created_at": datetime.now(timezone.utc).isoformat()
+            }
+            await db.users.insert_one(new_user)
+            logger.info(f"Created new Telegram user: {user_id}")
+        
+        # Create session token
+        session_token = f"tg_{uuid.uuid4().hex}"
+        expires_at = datetime.now(timezone.utc) + timedelta(days=30)  # Longer for Telegram
+        
+        # Delete any existing sessions for this user
+        await db.user_sessions.delete_many({"user_id": user_id})
+        
+        # Create new session
+        session_doc = {
+            "session_id": f"session_{uuid.uuid4().hex}",
+            "user_id": user_id,
+            "session_token": session_token,
+            "auth_type": "telegram",
+            "expires_at": expires_at.isoformat(),
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        
+        await db.user_sessions.insert_one(session_doc)
+        
+        # Set cookie
+        response.set_cookie(
+            key="session_token",
+            value=session_token,
+            httponly=True,
+            secure=True,
+            samesite="none",
+            max_age=30 * 24 * 60 * 60,  # 30 days
+            path="/"
+        )
+        
+        # Get full user data
+        user_doc = await db.users.find_one({"user_id": user_id}, {"_id": 0})
+        
+        logger.info(f"Telegram auth successful for user: {user_id}")
+        
+        return {
+            "user": user_doc,
+            "session_token": session_token,
+            "auth_type": "telegram"
+        }
+        
+    except HTTPException:
+        raise
+    except Exception as e:
+        logger.error(f"Telegram auth error: {e}")
+        raise HTTPException(status_code=500, detail=f"Authentication failed: {str(e)}")
+
 @api_router.post("/auth/logout")
 async def logout(request: Request, response: Response):
     """
