@@ -515,53 +515,86 @@ async def get_exercises():
     """
     exercises = await db.exercises.find({}, {"_id": 0}).to_list(100)
     
+    # Full list of all exercises
+    all_exercises = [
+        {
+            "exercise_id": "schulte",
+            "name": "Таблицы Шульте",
+            "description": "Тренировка периферийного зрения и концентрации",
+            "icon": "grid-3x3",
+            "difficulty": "medium",
+            "category": "attention"
+        },
+        {
+            "exercise_id": "sequence",
+            "name": "Запоминание последовательностей",
+            "description": "Запомните порядок загорающихся ячеек",
+            "icon": "brain",
+            "difficulty": "medium",
+            "category": "memory"
+        },
+        {
+            "exercise_id": "spot-difference",
+            "name": "Поиск отличий",
+            "description": "Найдите различия между AI-изображениями",
+            "icon": "scan-search",
+            "difficulty": "easy",
+            "category": "attention"
+        },
+        {
+            "exercise_id": "stroop",
+            "name": "Тест Струпа",
+            "description": "Тренировка когнитивной гибкости и внимания",
+            "icon": "palette",
+            "difficulty": "medium",
+            "category": "attention"
+        },
+        {
+            "exercise_id": "catch-letter",
+            "name": "Поймай букву",
+            "description": "Ловите падающие буквы на скорость",
+            "icon": "type",
+            "difficulty": "easy",
+            "category": "speed"
+        },
+        {
+            "exercise_id": "whack-mole",
+            "name": "Поймай крота",
+            "description": "Классическая игра на скорость реакции",
+            "icon": "target",
+            "difficulty": "easy",
+            "category": "speed"
+        },
+        {
+            "exercise_id": "math",
+            "name": "Математические задачи",
+            "description": "Решайте примеры на скорость",
+            "icon": "calculator",
+            "difficulty": "hard",
+            "category": "logic"
+        },
+        {
+            "exercise_id": "typing",
+            "name": "Скорость печати",
+            "description": "Тренировка скорости и точности набора текста",
+            "icon": "keyboard",
+            "difficulty": "medium",
+            "category": "speed"
+        }
+    ]
+    
     if not exercises:
-        # Initialize default exercises if none exist
-        default_exercises = [
-            {
-                "exercise_id": "schulte",
-                "name": "Таблицы Шульте",
-                "description": "Тренировка периферийного зрения и концентрации",
-                "icon": "grid-3x3",
-                "difficulty": "medium",
-                "category": "attention"
-            },
-            {
-                "exercise_id": "sequence",
-                "name": "Запоминание последовательностей",
-                "description": "Запомните порядок загорающихся ячеек",
-                "icon": "brain",
-                "difficulty": "medium",
-                "category": "memory"
-            },
-            {
-                "exercise_id": "spot-difference",
-                "name": "Поиск отличий",
-                "description": "Найдите различия между изображениями",
-                "icon": "scan-search",
-                "difficulty": "easy",
-                "category": "attention"
-            },
-            {
-                "exercise_id": "reaction",
-                "name": "Скорость реакции",
-                "description": "Проверьте свою скорость реакции",
-                "icon": "zap",
-                "difficulty": "easy",
-                "category": "speed"
-            },
-            {
-                "exercise_id": "math",
-                "name": "Математические задачи",
-                "description": "Решайте примеры на скорость",
-                "icon": "calculator",
-                "difficulty": "hard",
-                "category": "logic"
-            }
-        ]
+        # Initialize all exercises if none exist
+        await db.exercises.insert_many(all_exercises)
+        exercises = all_exercises
+    else:
+        # Check if all exercises exist, add missing ones
+        existing_ids = {e["exercise_id"] for e in exercises}
+        missing_exercises = [e for e in all_exercises if e["exercise_id"] not in existing_ids]
         
-        await db.exercises.insert_many(default_exercises)
-        exercises = default_exercises
+        if missing_exercises:
+            await db.exercises.insert_many(missing_exercises)
+            exercises = await db.exercises.find({}, {"_id": 0}).to_list(100)
     
     return exercises
 
