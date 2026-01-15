@@ -249,12 +249,12 @@ const MathGame = ({ difficulty, settings, onBack }) => {
                     ref={inputRef}
                     type="number"
                     value={userAnswer}
-                    onChange={(e) => setUserAnswer(e.target.value)}
+                    onChange={(e) => !feedback && setUserAnswer(e.target.value)}
                     onKeyDown={handleKeyDown}
-                    className="w-32 h-16 text-3xl text-center font-bold bg-white border-4 border-slate-300 focus:border-emerald-500 rounded-xl"
+                    className="w-32 h-16 text-3xl text-center font-bold bg-white border-4 border-slate-300 focus:border-emerald-500 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="?"
                     autoComplete="off"
-                    disabled={feedback !== null}
+                    autoFocus
                   />
                   <Button 
                     type="submit" 
