@@ -136,6 +136,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
     setTimeout(() => {
       const newSequence = generateSequence(settings.startLength + newLevel - 1);
       setSequence(newSequence);
+      currentSequenceRef.current = newSequence; // Update ref immediately
       showSequence(newSequence);
     }, 1000);
   };
