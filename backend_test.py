@@ -467,8 +467,23 @@ class TemplateStorageTest:
 
 async def main():
     """Main test runner"""
-    tester = TemplateStorageTest()
-    await tester.run_test()
+    print("🧪 BRAIN TRAINING PLATFORM - BACKEND TESTS")
+    print("=" * 60)
+    
+    # Run Telegram Authentication Tests
+    telegram_tester = TelegramAuthTest()
+    telegram_results = await telegram_tester.run_all_tests()
+    
+    # Check if we should run template storage tests
+    print("\n" + "=" * 60)
+    print("🤔 Template Storage Tests Available")
+    print("   Note: Template storage tests use existing session token")
+    print("   and test the spot-difference game template reuse logic")
+    
+    # For now, just run the Telegram auth tests as requested
+    print("\n🏁 MAIN TEST COMPLETE")
+    print("   Telegram authentication tests completed")
+    print("   Template storage tests available but not run in this session")
 
 if __name__ == "__main__":
     asyncio.run(main())
