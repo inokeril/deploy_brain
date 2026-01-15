@@ -202,20 +202,28 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
           </div>
         </CardHeader>
         <CardContent>
-          <div className="relative bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg overflow-hidden" style={{ height: '500px' }}>
+          <div 
+            ref={gameAreaRef}
+            className="relative bg-gradient-to-b from-blue-50 to-purple-50 rounded-lg overflow-hidden" 
+            style={{ height: '500px' }}
+          >
+            {/* Bottom danger zone indicator */}
+            <div className="absolute bottom-0 left-0 right-0 h-16 bg-gradient-to-t from-red-200/50 to-transparent pointer-events-none" />
+            
             {letters.map(letter => {
               if (letter.missed || letter.caught) return null;
               
               return (
                 <div
                   key={letter.id}
-                  className="absolute text-5xl font-bold transition-all duration-100"
+                  className="absolute text-5xl font-bold"
                   style={{
                     left: `${letter.x}%`,
                     top: `${letter.y}%`,
-                    transform: 'translate(-50%, -50%)',
+                    transform: 'translateX(-50%)',
                     color: '#3b82f6',
                     textShadow: '2px 2px 4px rgba(0,0,0,0.2)',
+                    transition: 'none',
                   }}
                 >
                   {letter.char}
