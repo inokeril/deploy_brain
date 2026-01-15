@@ -134,6 +134,7 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
     
     const newText = e.target.value;
     setTypedText(newText);
+    typedTextRef.current = newText; // Keep ref in sync
     
     // Only end game if user typed the EXACT full text
     // Use trimmed comparison to avoid whitespace issues
@@ -143,11 +144,15 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
   };
 
   const endGame = async (finalText = null) => {
+    // Prevent double ending
+    if (gameEndedRef.current) return;
+    gameEndedRef.current = true;
+    
     if (timerRef.current) clearInterval(timerRef.current);
     setGameState('finished');
     
-    // Use passed text or current state
-    const textToEvaluate = finalText || typedText;
+    // Use passed text or ref (more reliable than state)
+    const textToEvaluate = finalText || typedTextRef.current || typedText;
     
     const timeSpent = (Date.now() - startTime) / 1000;
     const calculatedWpm = calculateWPM(textToEvaluate, timeSpent);
