@@ -53,44 +53,56 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
     }
   }, [gameState, letters]);
 
-  const spawnLetter = () => {
-    if (letters.filter(l => !l.caught && !l.missed).length >= settings.maxLetters) {
-      return;
-    }
-
-    const char = settings.letters[Math.floor(Math.random() * settings.letters.length)];
-    const x = Math.random() * 80 + 10;
-    
-    setLetters(prev => [...prev, {
-      id: letterIdRef.current++,
-      char,
-      x,
-      y: 0,
-      caught: false,
-      missed: false,
-    }]);
-  };
-
-  const updateLetters = () => {
+  const spawnLetter = useCallback(() => {
     setLetters(prev => {
+      if (prev.filter(l => !l.caught && !l.missed).length >= settings.maxLetters) {
+        return prev;
+      }
+
+      const char = settings.letters[Math.floor(Math.random() * settings.letters.length)];
+      const x = Math.random() * 70 + 15;
+      
+      return [...prev, {
+        id: letterIdRef.current++,
+        char,
+        x,
+        y: -10,
+        caught: false,
+        missed: false,
+      }];
+    });
+  }, [settings.letters, settings.maxLetters]);
+
+  const updateLetters = useCallback(() => {
+    const now = Date.now();
+    const delta = (now - lastUpdateRef.current) / 16.67;
+    lastUpdateRef.current = now;
+
+    setLetters(prev => {
+      let newMissedCount = 0;
+      
       const updated = prev.map(letter => {
         if (letter.caught || letter.missed) return letter;
         
-        const newY = letter.y + settings.speed;
+        const newY = letter.y + (settings.speed * 0.5 * delta);
         
-        if (newY >= 100) {
-          setMissed(m => m + 1);
-          return { ...letter, missed: true };
+        if (newY >= 85) {
+          newMissedCount++;
+          return { ...letter, y: newY, missed: true };
         }
         
         return { ...letter, y: newY };
       });
       
-      return updated.filter(l => l.y < 100 || l.caught);
+      if (newMissedCount > 0) {
+        setMissed(m => m + newMissedCount);
+      }
+      
+      return updated.filter(l => !l.missed || l.y < 100);
     });
 
     animationRef.current = requestAnimationFrame(updateLetters);
-  };
+  }, [settings.speed]);
 
   const startGame = () => {
     setLetters([]);
