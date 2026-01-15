@@ -110,6 +110,7 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
     setMissed(0);
     setTimeLeft(settings.duration);
     setGameState('playing');
+    lastUpdateRef.current = Date.now();
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
