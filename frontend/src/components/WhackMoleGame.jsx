@@ -97,17 +97,18 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   const timerRef = useRef(null);
   const spawnRef = useRef(null);
   const moleTimeoutsRef = useRef({});
-  const moleStateRef = useRef({});
+  const processedMolesRef = useRef(new Set()); // Track processed moles to prevent double counting
+  const gameActiveRef = useRef(false);
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
   
   const gridSize = settings.gridSize || 3;
   const totalHoles = gridSize * gridSize;
-  // Responsive hole size
   const holeSize = Math.min(90, Math.floor((window.innerWidth - 60) / gridSize));
 
   useEffect(() => {
     return () => {
+      gameActiveRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
       if (spawnRef.current) clearInterval(spawnRef.current);
       Object.values(moleTimeoutsRef.current).forEach(timeout => clearTimeout(timeout));
@@ -115,6 +116,8 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   }, []);
 
   const spawnMole = useCallback(() => {
+    if (!gameActiveRef.current) return;
+    
     setMoles(prevMoles => {
       const activeMoles = Object.values(prevMoles).filter(m => m.visible && !m.hit).length;
       if (activeMoles >= settings.maxMoles) return prevMoles;
@@ -126,53 +129,67 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       if (availableHoles.length === 0) return prevMoles;
       
       const holeIndex = availableHoles[Math.floor(Math.random() * availableHoles.length)];
-      const moleId = Date.now() + '_' + holeIndex;
+      const moleId = `mole_${Date.now()}_${holeIndex}`;
       
       setTotalSpawned(prev => prev + 1);
       
-      moleStateRef.current[moleId] = { holeIndex, counted: false };
-      
+      // Set timeout for this mole to hide and count as miss
       const timeoutId = setTimeout(() => {
-        if (moleStateRef.current[moleId] && !moleStateRef.current[moleId].counted) {
-          moleStateRef.current[moleId].counted = true;
-          setMisses(m => m + 1);
-        }
+        if (!gameActiveRef.current) return;
         
         setMoles(prev => {
-          if (prev[holeIndex]?.visible && !prev[holeIndex]?.hit) {
+          const currentMole = prev[holeIndex];
+          // Only count as miss if this exact mole is still visible and not hit
+          if (currentMole?.moleId === moleId && currentMole?.visible && !currentMole?.hit) {
+            // Check if not already processed
+            if (!processedMolesRef.current.has(moleId)) {
+              processedMolesRef.current.add(moleId);
+              setMisses(m => m + 1);
+            }
             return { ...prev, [holeIndex]: { visible: false, hit: false, moleId: null } };
           }
           return prev;
         });
-        
-        delete moleStateRef.current[moleId];
       }, settings.moleVisibleTime);
       
-      moleTimeoutsRef.current[holeIndex] = timeoutId;
+      moleTimeoutsRef.current[moleId] = timeoutId;
       
       return { ...prevMoles, [holeIndex]: { visible: true, hit: false, moleId } };
     });
   }, [settings.maxMoles, settings.moleVisibleTime, totalHoles]);
 
   const handleWhack = useCallback((holeIndex) => {
+    if (!gameActiveRef.current) return;
+    
     setMoles(prev => {
-      if (!prev[holeIndex]?.visible || prev[holeIndex]?.hit) return prev;
+      const currentMole = prev[holeIndex];
+      if (!currentMole?.visible || currentMole?.hit) return prev;
       
-      const moleId = prev[holeIndex]?.moleId;
+      const moleId = currentMole.moleId;
       
-      if (moleId && moleStateRef.current[moleId]) {
-        moleStateRef.current[moleId].counted = true;
+      // Check if already processed
+      if (processedMolesRef.current.has(moleId)) return prev;
+      
+      // Mark as processed
+      processedMolesRef.current.add(moleId);
+      
+      // Clear the timeout for this mole
+      if (moleTimeoutsRef.current[moleId]) {
+        clearTimeout(moleTimeoutsRef.current[moleId]);
+        delete moleTimeoutsRef.current[moleId];
       }
       
-      if (moleTimeoutsRef.current[holeIndex]) {
-        clearTimeout(moleTimeoutsRef.current[holeIndex]);
-      }
-      
+      // Increment score
       setScore(s => s + 1);
       
+      // Hide mole after hit animation
       setTimeout(() => {
-        setMoles(p => ({ ...p, [holeIndex]: { visible: false, hit: false, moleId: null } }));
-        if (moleId) delete moleStateRef.current[moleId];
+        setMoles(p => {
+          if (p[holeIndex]?.moleId === moleId) {
+            return { ...p, [holeIndex]: { visible: false, hit: false, moleId: null } };
+          }
+          return p;
+        });
       }, 300);
       
       return { ...prev, [holeIndex]: { ...prev[holeIndex], hit: true } };
@@ -186,8 +203,9 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
     setTotalSpawned(0);
     setTimeLeft(settings.duration);
     setGameState('playing');
-    moleStateRef.current = {};
+    processedMolesRef.current = new Set();
     moleTimeoutsRef.current = {};
+    gameActiveRef.current = true;
     
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
@@ -204,6 +222,7 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   };
 
   const endGame = async () => {
+    gameActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     if (spawnRef.current) clearInterval(spawnRef.current);
     Object.values(moleTimeoutsRef.current).forEach(timeout => clearTimeout(timeout));
@@ -287,7 +306,6 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
           </div>
         </CardHeader>
         <CardContent className="px-2 sm:px-6">
-          {/* Game Field */}
           <div 
             className="relative rounded-xl sm:rounded-2xl overflow-hidden mx-auto"
             style={{ 
@@ -296,13 +314,11 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
               maxWidth: '100%',
             }}
           >
-            {/* Sky decorations - smaller on mobile */}
             <div className="absolute top-1 left-2 sm:top-2 sm:left-4 text-lg sm:text-2xl opacity-80">☁️</div>
             <div className="absolute top-2 right-6 sm:top-4 sm:right-8 text-base sm:text-xl opacity-60">☁️</div>
             <div className="absolute top-0 right-16 sm:top-1 sm:right-24 text-sm sm:text-lg opacity-70">☁️</div>
             <div className="absolute top-1 right-2 sm:top-2 sm:right-4 text-xl sm:text-3xl">🌞</div>
             
-            {/* Grass field background */}
             <div 
               className="relative rounded-lg sm:rounded-xl p-2 sm:p-4 mt-6 sm:mt-8"
               style={{
@@ -310,7 +326,6 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
                 boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.3)',
               }}
             >
-              {/* Holes grid */}
               <div 
                 className="grid gap-1 sm:gap-2 justify-center items-end mx-auto"
                 style={{ 
