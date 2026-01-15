@@ -21,6 +21,7 @@ const MathGame = ({ difficulty, settings, onBack }) => {
   
   const timerRef = useRef(null);
   const inputRef = useRef(null);
+  const gameActiveRef = useRef(false);
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
   
@@ -33,6 +34,7 @@ const MathGame = ({ difficulty, settings, onBack }) => {
 
   useEffect(() => {
     return () => {
+      gameActiveRef.current = false;
       if (timerRef.current) clearInterval(timerRef.current);
     };
   }, []);
@@ -85,6 +87,7 @@ const MathGame = ({ difficulty, settings, onBack }) => {
     setUserAnswer('');
     setFeedback(null);
     setGameState('playing');
+    gameActiveRef.current = true;
     setCurrentProblem(generateProblem());
     
     timerRef.current = setInterval(() => {
@@ -97,15 +100,20 @@ const MathGame = ({ difficulty, settings, onBack }) => {
       });
     }, 1000);
     
-    setTimeout(() => inputRef.current?.focus(), 100);
+    // Focus input with delay
+    setTimeout(() => {
+      inputRef.current?.focus();
+    }, 100);
   };
 
   // Check answer automatically when user types
   const handleInputChange = (e) => {
+    if (!gameActiveRef.current) return;
+    
     const value = e.target.value;
     setUserAnswer(value);
     
-    if (gameState !== 'playing' || !currentProblem || value === '' || value === '-') return;
+    if (!currentProblem || value === '' || value === '-') return;
     
     const numericAnswer = parseInt(value, 10);
     
@@ -119,39 +127,45 @@ const MathGame = ({ difficulty, settings, onBack }) => {
       setMaxStreak(prev => Math.max(prev, newStreak));
       setFeedback({ type: 'correct' });
       
+      // Very short delay then move to next problem
       setTimeout(() => {
+        if (!gameActiveRef.current) return;
         setFeedback(null);
         setUserAnswer('');
         setCurrentProblem(generateProblem());
+        // Keep focus on input - this is key!
         inputRef.current?.focus();
-      }, 200);
+      }, 150);
     }
   };
 
-  // Manual submit for wrong answers or Enter key
-  const handleSubmit = (e) => {
-    e?.preventDefault();
-    if (gameState !== 'playing' || !currentProblem || userAnswer === '') return;
-    
-    const numericAnswer = parseInt(userAnswer, 10);
-    
-    if (numericAnswer !== currentProblem.answer) {
-      // Wrong answer
-      setProblemsAnswered(prev => prev + 1);
-      setErrors(prev => prev + 1);
-      setStreak(0);
-      setFeedback({ type: 'wrong', correctAnswer: currentProblem.answer });
+  // Handle Enter key for wrong answers
+  const handleKeyDown = (e) => {
+    if (e.key === 'Enter' && userAnswer !== '') {
+      e.preventDefault();
       
-      setTimeout(() => {
-        setFeedback(null);
-        setUserAnswer('');
-        setCurrentProblem(generateProblem());
-        inputRef.current?.focus();
-      }, 800);
+      const numericAnswer = parseInt(userAnswer, 10);
+      
+      if (numericAnswer !== currentProblem?.answer) {
+        // Wrong answer
+        setProblemsAnswered(prev => prev + 1);
+        setErrors(prev => prev + 1);
+        setStreak(0);
+        setFeedback({ type: 'wrong', correctAnswer: currentProblem.answer });
+        
+        setTimeout(() => {
+          if (!gameActiveRef.current) return;
+          setFeedback(null);
+          setUserAnswer('');
+          setCurrentProblem(generateProblem());
+          inputRef.current?.focus();
+        }, 600);
+      }
     }
   };
 
   const endGame = async () => {
+    gameActiveRef.current = false;
     if (timerRef.current) clearInterval(timerRef.current);
     setGameState('finished');
     
@@ -251,7 +265,7 @@ const MathGame = ({ difficulty, settings, onBack }) => {
                   {currentProblem.num1} {operatorSymbols[currentProblem.operation]} {currentProblem.num2} = ?
                 </div>
                 
-                <form onSubmit={handleSubmit} className="flex items-center justify-center gap-2 sm:gap-4">
+                <div className="flex items-center justify-center gap-2 sm:gap-4">
                   <Input
                     ref={inputRef}
                     type="number"
@@ -259,13 +273,13 @@ const MathGame = ({ difficulty, settings, onBack }) => {
                     pattern="[0-9]*"
                     value={userAnswer}
                     onChange={handleInputChange}
-                    className="w-24 sm:w-32 h-12 sm:h-16 text-xl sm:text-3xl text-center font-bold bg-white border-4 border-slate-300 focus:border-emerald-500 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
+                    onKeyDown={handleKeyDown}
+                    className="w-28 sm:w-36 h-14 sm:h-16 text-2xl sm:text-3xl text-center font-bold bg-white border-4 border-slate-300 focus:border-emerald-500 rounded-xl [appearance:textfield] [&::-webkit-outer-spin-button]:appearance-none [&::-webkit-inner-spin-button]:appearance-none"
                     placeholder="?"
                     autoComplete="off"
-                    autoFocus
                     disabled={feedback !== null}
                   />
-                </form>
+                </div>
                 
                 <p className="text-slate-400 text-xs sm:text-sm mt-4">
                   💡 Правильный ответ засчитается автоматически
