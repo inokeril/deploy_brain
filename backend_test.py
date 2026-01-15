@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """
-Template Storage System Test - Focused on Template Reuse Logic
-Tests the 4 scenarios with existing mock template to avoid AI generation budget issues
+Brain Training Platform Backend Tests
+Tests Telegram authentication and core API endpoints
 """
 
 import asyncio
