@@ -159,13 +159,20 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       
       // Set timeout for this mole to hide
       const timeoutId = setTimeout(() => {
+        let shouldIncrementMiss = false;
+        
         setMoles(prev => {
           if (prev[holeIndex]?.visible && !prev[holeIndex]?.hit) {
-            setMisses(m => m + 1);
+            shouldIncrementMiss = true;
             return { ...prev, [holeIndex]: { visible: false, hit: false } };
           }
           return prev;
         });
+        
+        // Increment miss counter outside of setMoles to avoid double counting
+        if (shouldIncrementMiss) {
+          setMisses(m => m + 1);
+        }
       }, settings.moleVisibleTime);
       
       moleTimeoutsRef.current[holeIndex] = timeoutId;
