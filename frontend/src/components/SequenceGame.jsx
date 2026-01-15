@@ -17,6 +17,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
   
   const showTimeoutRef = useRef(null);
   const sequenceTimeoutRef = useRef(null);
+  const currentSequenceRef = useRef([]); // Ref to track current sequence for validation
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
   
