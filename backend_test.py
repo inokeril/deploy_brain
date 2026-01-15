@@ -232,6 +232,7 @@ class TelegramAuthTest:
             print("⚠️  Some tests failed - check details above")
         
         return results
+class TemplateStorageTest:
     def __init__(self):
         self.session_token = SESSION_TOKEN
         self.user_id = USER_ID
