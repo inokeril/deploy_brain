@@ -101,6 +101,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/typing"
+        element={
+          <ProtectedRoute>
+            <TypingPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
