@@ -1089,6 +1089,81 @@ async def save_math_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
+# TYPING GAME TEXT GENERATION
+# ============================================================================
+
+class GenerateTextRequest(BaseModel):
+    difficulty: str
+    word_count: int = 30
+
+@api_router.post("/typing/generate-text")
+async def generate_typing_text(
+    request: GenerateTextRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Generate text for typing game using AI."""
+    try:
+        api_key = os.environ.get('EMERGENT_LLM_KEY')
+        if not api_key:
+            raise HTTPException(status_code=500, detail="LLM API key not configured")
+        
+        # Determine text complexity based on difficulty
+        if request.difficulty == 'easy':
+            prompt = f"""Сгенерируй короткий интересный текст на русском языке для тренировки скорости печати. 
+            Текст должен быть:
+            - Примерно {request.word_count} слов
+            - Простые предложения
+            - Без сложных терминов и иностранных слов
+            - Тема: природа, животные или повседневная жизнь
+            
+            Верни ТОЛЬКО текст без кавычек и пояснений."""
+            
+        elif request.difficulty == 'medium':
+            prompt = f"""Сгенерируй интересный текст на русском языке для тренировки скорости печати.
+            Текст должен быть:
+            - Примерно {request.word_count} слов
+            - Средняя сложность предложений
+            - Может включать цифры и знаки препинания
+            - Тема: наука, технологии, история или интересные факты
+            
+            Верни ТОЛЬКО текст без кавычек и пояснений."""
+            
+        else:  # hard
+            prompt = f"""Сгенерируй сложный текст для тренировки скорости печати.
+            Текст должен быть:
+            - Примерно {request.word_count} слов
+            - Сложные предложения с разными знаками препинания
+            - Включает английские слова и технические термины
+            - Может включать цифры и специальные символы
+            - Тема: программирование, IT, наука или философия
+            
+            Верни ТОЛЬКО текст без кавычек и пояснений."""
+        
+        chat = LlmChat(
+            api_key=api_key,
+            session_id=f"typing_{user['user_id']}_{uuid.uuid4().hex[:8]}",
+            system_message="Ты генератор текстов для тренировки скорости печати. Отвечай только сгенерированным текстом."
+        ).with_model("openai", "gpt-4o-mini")
+        
+        user_message = UserMessage(text=prompt)
+        generated_text = await chat.send_message(user_message)
+        
+        # Clean up the text
+        generated_text = generated_text.strip().strip('"').strip("'")
+        
+        return {"text": generated_text}
+        
+    except Exception as e:
+        logger.error(f"Error generating typing text: {e}")
+        # Fallback texts if AI fails
+        fallback_texts = {
+            'easy': 'Солнце светит ярко. Птицы поют на деревьях. Сегодня прекрасный день для прогулки в парке.',
+            'medium': 'Программирование требует внимания к деталям. Каждая строка кода имеет значение. Разработчики создают удивительные приложения.',
+            'hard': 'Machine learning algorithms процессируют большие объёмы данных. Python и JavaScript являются популярными языками. DevOps практики улучшают deployment процессы.'
+        }
+        return {"text": fallback_texts.get(request.difficulty, fallback_texts['easy'])}
+
+# ============================================================================
 # BASIC ROUTES
 # ============================================================================
 
