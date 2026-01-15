@@ -1,4 +1,4 @@
-import React, { useState, useEffect, useRef } from 'react';
+import React, { useState, useEffect, useRef, useCallback } from 'react';
 import { Card, CardContent, CardHeader, CardTitle } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Badge } from '@/components/ui/badge';
@@ -18,6 +18,8 @@ const CatchLetterGame = ({ difficulty, settings, onBack }) => {
   const spawnRef = useRef(null);
   const animationRef = useRef(null);
   const letterIdRef = useRef(0);
+  const gameAreaRef = useRef(null);
+  const lastUpdateRef = useRef(Date.now());
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
 
