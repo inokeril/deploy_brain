@@ -335,8 +335,8 @@ async def get_exercises():
             {
                 "exercise_id": "sequence",
                 "name": "Запоминание последовательностей",
-                "description": "Запомните порядок чисел или цветов",
-                "icon": "list-ordered",
+                "description": "Запомните порядок загорающихся ячеек",
+                "icon": "brain",
                 "difficulty": "medium",
                 "category": "memory"
             },
