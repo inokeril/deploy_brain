@@ -6,62 +6,44 @@ import { Clock, Trophy, RotateCcw } from 'lucide-react';
 import { Dialog, DialogContent, DialogDescription, DialogHeader, DialogTitle } from '@/components/ui/dialog';
 
 // Mole component with animation
-const Mole = ({ isVisible, isHit, onClick }) => {
+const Mole = ({ isVisible, isHit, onClick, size }) => {
+  const moleSize = size === 'small' ? 'w-[60%]' : 'w-[70%]';
+  
   return (
     <div 
-      className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[70%] cursor-pointer transition-all duration-150 ease-out select-none"
+      className={`absolute bottom-0 left-1/2 -translate-x-1/2 ${moleSize} cursor-pointer transition-all duration-150 ease-out select-none`}
       style={{
         transform: `translateX(-50%) translateY(${isVisible ? '15%' : '100%'})`,
         opacity: isHit ? 0.5 : 1,
       }}
       onClick={onClick}
     >
-      {/* Mole body */}
       <div className={`relative transition-transform duration-100 ${isHit ? 'scale-90' : 'hover:scale-105'}`}>
-        {/* Mole face */}
         <div className="relative">
-          {/* Main head */}
           <div className="bg-gradient-to-b from-amber-600 to-amber-800 rounded-t-full aspect-square relative overflow-hidden">
-            {/* Ears */}
-            <div className="absolute -left-1 top-2 w-4 h-4 bg-amber-700 rounded-full" />
-            <div className="absolute -right-1 top-2 w-4 h-4 bg-amber-700 rounded-full" />
-            
-            {/* Face lighter area */}
+            <div className="absolute -left-1 top-2 w-3 h-3 sm:w-4 sm:h-4 bg-amber-700 rounded-full" />
+            <div className="absolute -right-1 top-2 w-3 h-3 sm:w-4 sm:h-4 bg-amber-700 rounded-full" />
             <div className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[75%] h-[60%] bg-gradient-to-t from-amber-200 to-amber-400 rounded-t-full" />
-            
-            {/* Eyes */}
-            <div className="absolute top-[35%] left-1/2 -translate-x-1/2 flex gap-3">
+            <div className="absolute top-[35%] left-1/2 -translate-x-1/2 flex gap-2 sm:gap-3">
               <div className="relative">
-                <div className="w-3 h-3 bg-white rounded-full">
-                  <div className={`absolute w-2 h-2 bg-black rounded-full top-0.5 left-0.5 ${isHit ? '' : 'animate-pulse'}`} />
+                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full">
+                  <div className={`absolute w-1.5 h-1.5 sm:w-2 sm:h-2 bg-black rounded-full top-0.5 left-0.5 ${isHit ? '' : 'animate-pulse'}`} />
                 </div>
               </div>
               <div className="relative">
-                <div className="w-3 h-3 bg-white rounded-full">
-                  <div className={`absolute w-2 h-2 bg-black rounded-full top-0.5 left-0.5 ${isHit ? '' : 'animate-pulse'}`} />
+                <div className="w-2 h-2 sm:w-3 sm:h-3 bg-white rounded-full">
+                  <div className={`absolute w-1.5 h-1.5 sm:w-2 sm:h-2 bg-black rounded-full top-0.5 left-0.5 ${isHit ? '' : 'animate-pulse'}`} />
                 </div>
               </div>
             </div>
-            
-            {/* Nose */}
-            <div className="absolute top-[55%] left-1/2 -translate-x-1/2 w-4 h-3 bg-pink-400 rounded-full" />
-            
-            {/* Whiskers */}
-            <div className="absolute top-[60%] left-[15%] w-4 h-0.5 bg-amber-900 -rotate-12" />
-            <div className="absolute top-[65%] left-[15%] w-3 h-0.5 bg-amber-900" />
-            <div className="absolute top-[60%] right-[15%] w-4 h-0.5 bg-amber-900 rotate-12" />
-            <div className="absolute top-[65%] right-[15%] w-3 h-0.5 bg-amber-900" />
-            
-            {/* Mouth / Teeth */}
+            <div className="absolute top-[55%] left-1/2 -translate-x-1/2 w-3 h-2 sm:w-4 sm:h-3 bg-pink-400 rounded-full" />
             <div className="absolute top-[70%] left-1/2 -translate-x-1/2 flex gap-0.5">
-              <div className="w-1.5 h-2 bg-white rounded-b-sm" />
-              <div className="w-1.5 h-2 bg-white rounded-b-sm" />
+              <div className="w-1 h-1.5 sm:w-1.5 sm:h-2 bg-white rounded-b-sm" />
+              <div className="w-1 h-1.5 sm:w-1.5 sm:h-2 bg-white rounded-b-sm" />
             </div>
-            
-            {/* Hit effect - stars */}
             {isHit && (
               <div className="absolute inset-0 flex items-center justify-center">
-                <span className="text-2xl animate-ping">⭐</span>
+                <span className="text-lg sm:text-2xl animate-ping">⭐</span>
               </div>
             )}
           </div>
@@ -81,32 +63,22 @@ const Hole = ({ index, moleState, onWhack, holeSize }) => {
       className="relative flex items-end justify-center"
       style={{ width: holeSize, height: holeSize }}
     >
-      {/* Hole with mole container */}
       <div className="relative w-full h-[85%] overflow-hidden">
-        {/* Mole */}
         <Mole 
           isVisible={isVisible} 
           isHit={isHit} 
           onClick={() => isVisible && !isHit && onWhack(index)}
+          size={holeSize < 100 ? 'small' : 'normal'}
         />
       </div>
       
-      {/* Hole front (covers mole when hidden) */}
       <div className="absolute bottom-0 w-full">
-        {/* Dirt mound */}
         <div className="relative">
-          {/* Back shadow */}
           <div 
-            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[95%] h-6 bg-amber-900/30 rounded-[50%]"
+            className="absolute bottom-0 left-1/2 -translate-x-1/2 w-[95%] h-4 sm:h-6 bg-amber-900/30 rounded-[50%]"
             style={{ transform: 'translateX(-50%) translateY(2px)' }}
           />
-          {/* Main hole ellipse */}
-          <div className="relative w-full h-5 bg-gradient-to-b from-amber-950 to-black rounded-[50%] border-4 border-amber-800" />
-          {/* Grass around hole */}
-          <div className="absolute -top-1 left-[10%] w-2 h-3 bg-green-600 rounded-t-full -rotate-12" />
-          <div className="absolute -top-2 left-[20%] w-1.5 h-4 bg-green-500 rounded-t-full rotate-6" />
-          <div className="absolute -top-1 right-[10%] w-2 h-3 bg-green-600 rounded-t-full rotate-12" />
-          <div className="absolute -top-2 right-[20%] w-1.5 h-4 bg-green-500 rounded-t-full -rotate-6" />
+          <div className="relative w-full h-3 sm:h-5 bg-gradient-to-b from-amber-950 to-black rounded-[50%] border-2 sm:border-4 border-amber-800" />
         </div>
       </div>
     </div>
@@ -125,14 +97,14 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   const timerRef = useRef(null);
   const spawnRef = useRef(null);
   const moleTimeoutsRef = useRef({});
-  const moleStateRef = useRef({}); // Track mole states to prevent double counting
+  const moleStateRef = useRef({});
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
   
-  // Calculate grid based on settings
   const gridSize = settings.gridSize || 3;
   const totalHoles = gridSize * gridSize;
-  const holeSize = Math.min(140, 500 / gridSize - 10);
+  // Responsive hole size
+  const holeSize = Math.min(90, Math.floor((window.innerWidth - 60) / gridSize));
 
   useEffect(() => {
     return () => {
@@ -147,7 +119,6 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       const activeMoles = Object.values(prevMoles).filter(m => m.visible && !m.hit).length;
       if (activeMoles >= settings.maxMoles) return prevMoles;
       
-      // Find available holes
       const occupiedHoles = Object.keys(prevMoles).filter(k => prevMoles[k].visible);
       const availableHoles = Array.from({ length: totalHoles }, (_, i) => i)
         .filter(i => !occupiedHoles.includes(String(i)));
@@ -159,12 +130,9 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       
       setTotalSpawned(prev => prev + 1);
       
-      // Track this mole in ref
       moleStateRef.current[moleId] = { holeIndex, counted: false };
       
-      // Set timeout for this mole to hide
       const timeoutId = setTimeout(() => {
-        // Check ref to prevent double counting
         if (moleStateRef.current[moleId] && !moleStateRef.current[moleId].counted) {
           moleStateRef.current[moleId].counted = true;
           setMisses(m => m + 1);
@@ -192,19 +160,16 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       
       const moleId = prev[holeIndex]?.moleId;
       
-      // Mark as counted in ref to prevent miss counting
       if (moleId && moleStateRef.current[moleId]) {
         moleStateRef.current[moleId].counted = true;
       }
       
-      // Clear the timeout for this mole
       if (moleTimeoutsRef.current[holeIndex]) {
         clearTimeout(moleTimeoutsRef.current[holeIndex]);
       }
       
       setScore(s => s + 1);
       
-      // Hide mole after hit animation
       setTimeout(() => {
         setMoles(p => ({ ...p, [holeIndex]: { visible: false, hit: false, moleId: null } }));
         if (moleId) delete moleStateRef.current[moleId];
@@ -235,8 +200,6 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
     }, 1000);
 
     spawnRef.current = setInterval(spawnMole, settings.spawnInterval);
-    
-    // Spawn first mole immediately
     setTimeout(spawnMole, 500);
   };
 
@@ -274,20 +237,20 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   if (gameState === 'idle') {
     return (
       <Card className="max-w-4xl mx-auto">
-        <CardContent className="py-16 text-center">
-          <div className="text-7xl mb-6">🦔</div>
-          <h3 className="text-2xl font-bold mb-4">Поймай крота</h3>
-          <p className="text-gray-600 mb-4 max-w-md mx-auto">
-            Кроты выглядывают из норок! Кликайте на них как можно быстрее, чтобы набрать очки.
+        <CardContent className="py-10 sm:py-16 text-center px-4">
+          <div className="text-5xl sm:text-7xl mb-4 sm:mb-6">🦔</div>
+          <h3 className="text-xl sm:text-2xl font-bold mb-4">Поймай крота</h3>
+          <p className="text-gray-600 mb-4 max-w-md mx-auto text-sm sm:text-base">
+            Кроты выглядывают из норок! Кликайте на них как можно быстрее.
           </p>
-          <div className="flex justify-center gap-4 mb-8 text-sm text-gray-500">
+          <div className="flex flex-wrap justify-center gap-2 sm:gap-4 mb-6 sm:mb-8 text-xs sm:text-sm text-gray-500">
             <span>🕳️ Норок: {totalHoles}</span>
-            <span>🦔 Макс. кротов: {settings.maxMoles}</span>
+            <span>🦔 Макс: {settings.maxMoles}</span>
             <span>⏱️ Время: {settings.duration}с</span>
           </div>
           <Button 
             onClick={startGame} 
-            className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-8 py-6 text-lg"
+            className="bg-gradient-to-r from-amber-500 to-orange-600 hover:from-amber-600 hover:to-orange-700 text-white px-6 sm:px-8 py-4 sm:py-6 text-base sm:text-lg"
           >
             Начать игру
           </Button>
@@ -302,48 +265,46 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
         <CardHeader className="pb-2">
           <div className="flex items-center justify-between">
             <div>
-              <CardTitle className="text-2xl mb-2">Поймай крота</CardTitle>
-              <Badge className="bg-amber-100 text-amber-700">{difficultyNames[difficulty]}</Badge>
+              <CardTitle className="text-lg sm:text-2xl mb-2">Поймай крота</CardTitle>
+              <Badge className="bg-amber-100 text-amber-700 text-xs">{difficultyNames[difficulty]}</Badge>
             </div>
-            <div className="flex items-center space-x-6">
+            <div className="flex items-center space-x-3 sm:space-x-6">
               <div className="text-center">
-                <div className="text-sm text-gray-600">Поймано</div>
-                <div className="text-2xl font-bold text-green-600">{score}</div>
+                <div className="text-xs text-gray-600">Поймано</div>
+                <div className="text-lg sm:text-2xl font-bold text-green-600">{score}</div>
               </div>
               <div className="text-center">
-                <div className="text-sm text-gray-600">Сбежало</div>
-                <div className="text-2xl font-bold text-red-600">{misses}</div>
+                <div className="text-xs text-gray-600">Сбежало</div>
+                <div className="text-lg sm:text-2xl font-bold text-red-600">{misses}</div>
               </div>
               <div className="text-center">
-                <Clock className="w-5 h-5 text-gray-600 mx-auto" />
-                <div className={`text-2xl font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
+                <Clock className="w-4 h-4 sm:w-5 sm:h-5 text-gray-600 mx-auto" />
+                <div className={`text-lg sm:text-2xl font-bold ${timeLeft <= 10 ? 'text-red-600 animate-pulse' : 'text-gray-900'}`}>
                   {timeLeft}с
                 </div>
               </div>
             </div>
           </div>
         </CardHeader>
-        <CardContent>
+        <CardContent className="px-2 sm:px-6">
           {/* Game Field */}
           <div 
-            className="relative rounded-2xl overflow-hidden mx-auto"
+            className="relative rounded-xl sm:rounded-2xl overflow-hidden mx-auto"
             style={{ 
               background: 'linear-gradient(180deg, #87CEEB 0%, #98D8AA 30%, #4A7C23 50%, #3D5A1E 100%)',
-              padding: '20px',
-              minHeight: '450px',
+              padding: '10px',
+              maxWidth: '100%',
             }}
           >
-            {/* Sky decorations */}
-            <div className="absolute top-2 left-4 text-2xl opacity-80">☁️</div>
-            <div className="absolute top-4 right-8 text-xl opacity-60">☁️</div>
-            <div className="absolute top-1 right-24 text-lg opacity-70">☁️</div>
-            
-            {/* Sun */}
-            <div className="absolute top-2 right-4 text-3xl">🌞</div>
+            {/* Sky decorations - smaller on mobile */}
+            <div className="absolute top-1 left-2 sm:top-2 sm:left-4 text-lg sm:text-2xl opacity-80">☁️</div>
+            <div className="absolute top-2 right-6 sm:top-4 sm:right-8 text-base sm:text-xl opacity-60">☁️</div>
+            <div className="absolute top-0 right-16 sm:top-1 sm:right-24 text-sm sm:text-lg opacity-70">☁️</div>
+            <div className="absolute top-1 right-2 sm:top-2 sm:right-4 text-xl sm:text-3xl">🌞</div>
             
             {/* Grass field background */}
             <div 
-              className="relative rounded-xl p-4 mt-8"
+              className="relative rounded-lg sm:rounded-xl p-2 sm:p-4 mt-6 sm:mt-8"
               style={{
                 background: 'linear-gradient(180deg, #6B8E23 0%, #556B2F 50%, #4A5D23 100%)',
                 boxShadow: 'inset 0 4px 20px rgba(0,0,0,0.3)',
@@ -351,10 +312,9 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
             >
               {/* Holes grid */}
               <div 
-                className="grid gap-2 justify-center items-end mx-auto"
+                className="grid gap-1 sm:gap-2 justify-center items-end mx-auto"
                 style={{ 
                   gridTemplateColumns: `repeat(${gridSize}, ${holeSize}px)`,
-                  minHeight: `${gridSize * holeSize}px`,
                 }}
               >
                 {Array.from({ length: totalHoles }).map((_, index) => (
@@ -368,59 +328,52 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
                 ))}
               </div>
             </div>
-            
-            {/* Fence decoration */}
-            <div className="absolute bottom-0 left-0 right-0 h-4 flex justify-around">
-              {Array.from({ length: 12 }).map((_, i) => (
-                <div key={i} className="w-1 h-full bg-amber-800 rounded-t" />
-              ))}
-            </div>
           </div>
           
-          <div className="mt-4 text-center text-sm text-gray-600">
-            🔨 Кликайте по кротам, когда они выглядывают из норок!
+          <div className="mt-3 sm:mt-4 text-center text-xs sm:text-sm text-gray-600">
+            🔨 Кликайте по кротам!
           </div>
         </CardContent>
       </Card>
 
       <Dialog open={showResults} onOpenChange={setShowResults}>
-        <DialogContent className="max-w-md">
+        <DialogContent className="max-w-md mx-4">
           <DialogHeader>
-            <DialogTitle className="text-2xl text-center mb-2">
-              <Trophy className="w-12 h-12 text-yellow-500 mx-auto mb-2" />
+            <DialogTitle className="text-xl sm:text-2xl text-center mb-2">
+              <Trophy className="w-10 h-10 sm:w-12 sm:h-12 text-yellow-500 mx-auto mb-2" />
               Игра завершена!
             </DialogTitle>
-            <DialogDescription className="text-center text-base">
+            <DialogDescription className="text-center text-sm sm:text-base">
               Результаты игры "Поймай крота"
             </DialogDescription>
           </DialogHeader>
-          <div className="py-6 space-y-6">
+          <div className="py-4 sm:py-6 space-y-4 sm:space-y-6">
             <div className="text-center p-4 bg-gradient-to-br from-amber-50 to-orange-50 rounded-lg">
               <div className="text-sm text-gray-600 mb-1">Итоговый счёт</div>
-              <div className="text-4xl font-bold text-amber-600">{score}</div>
+              <div className="text-3xl sm:text-4xl font-bold text-amber-600">{score}</div>
               <div className="text-sm text-gray-600 mt-2">
                 Точность: {totalSpawned > 0 ? Math.round((score / totalSpawned) * 100) : 0}%
               </div>
             </div>
 
-            <div className="grid grid-cols-2 gap-4">
-              <div className="text-center p-4 bg-green-50 rounded-lg">
-                <div className="text-sm text-gray-600 mb-1">Поймано</div>
-                <div className="text-2xl font-bold text-green-600">{score}</div>
+            <div className="grid grid-cols-2 gap-3 sm:gap-4">
+              <div className="text-center p-3 sm:p-4 bg-green-50 rounded-lg">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">Поймано</div>
+                <div className="text-xl sm:text-2xl font-bold text-green-600">{score}</div>
               </div>
-              <div className="text-center p-4 bg-red-50 rounded-lg">
-                <div className="text-sm text-gray-600 mb-1">Сбежало</div>
-                <div className="text-2xl font-bold text-red-600">{misses}</div>
+              <div className="text-center p-3 sm:p-4 bg-red-50 rounded-lg">
+                <div className="text-xs sm:text-sm text-gray-600 mb-1">Сбежало</div>
+                <div className="text-xl sm:text-2xl font-bold text-red-600">{misses}</div>
               </div>
             </div>
 
-            <div className="flex space-x-3 pt-4">
-              <Button onClick={handleRestart} className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700">
+            <div className="flex space-x-2 sm:space-x-3 pt-2 sm:pt-4">
+              <Button onClick={handleRestart} className="flex-1 bg-gradient-to-r from-amber-600 to-orange-600 hover:from-amber-700 hover:to-orange-700 text-sm sm:text-base">
                 <RotateCcw className="w-4 h-4 mr-2" />
-                Играть ещё
+                Ещё
               </Button>
-              <Button onClick={onBack} variant="outline" className="flex-1">
-                Выбрать сложность
+              <Button onClick={onBack} variant="outline" className="flex-1 text-sm sm:text-base">
+                Назад
               </Button>
             </div>
           </div>
