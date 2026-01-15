@@ -113,6 +113,8 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
     setGameState('playing');
     setTimeLeft(settings.duration);
     setStartTime(Date.now());
+    gameEndedRef.current = false; // Reset for new game
+    typedTextRef.current = ''; // Reset typed text ref
     
     setTimeout(() => {
       inputRef.current?.focus();
@@ -121,7 +123,8 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
     timerRef.current = setInterval(() => {
       setTimeLeft(prev => {
         if (prev <= 1) {
-          endGame();
+          // Use setTimeout to avoid calling endGame inside setState
+          setTimeout(() => endGame(), 0);
           return 0;
         }
         return prev - 1;
