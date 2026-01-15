@@ -1046,6 +1046,48 @@ async def save_sequence_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
+# MATH GAME ROUTES
+# ============================================================================
+
+class MathSaveRequest(BaseModel):
+    difficulty: str
+    correct_answers: int
+    total_problems: int
+    errors: int
+    accuracy: int
+    max_streak: int
+    total_time: float
+
+@api_router.post("/math/save")
+async def save_math_result(
+    request: MathSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save math game result."""
+    try:
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "math",
+            "score": request.correct_answers,
+            "time": request.total_time,
+            "difficulty": request.difficulty,
+            "correct_answers": request.correct_answers,
+            "total_problems": request.total_problems,
+            "errors": request.errors,
+            "accuracy": request.accuracy,
+            "max_streak": request.max_streak,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "math", request.correct_answers)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving math result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
 # BASIC ROUTES
 # ============================================================================
 
