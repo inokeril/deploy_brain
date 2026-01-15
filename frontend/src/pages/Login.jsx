@@ -1,9 +1,83 @@
-import React from 'react';
+import React, { useEffect } from 'react';
+import { useNavigate } from 'react-router-dom';
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from '@/components/ui/card';
 import { Button } from '@/components/ui/button';
 import { Brain, Zap, Trophy, Target } from 'lucide-react';
+import { useTelegram } from '@/contexts/TelegramContext';
+import { useAuth } from '@/contexts/AuthContext';
 
 const Login = () => {
+  const navigate = useNavigate();
+  const { isTelegram, themeParams } = useTelegram();
+  const { isAuthenticated, isLoading } = useAuth();
+
+  // If in Telegram and authenticated, redirect to dashboard
+  useEffect(() => {
+    if (isTelegram && isAuthenticated) {
+      navigate('/dashboard', { replace: true });
+    }
+  }, [isTelegram, isAuthenticated, navigate]);
+
+  // If in Telegram but not authenticated, show loading (auth should happen automatically)
+  if (isTelegram) {
+    if (isLoading) {
+      return (
+        <div 
+          className="min-h-screen flex items-center justify-center"
+          style={{ backgroundColor: themeParams?.bg_color || '#ffffff' }}
+        >
+          <div className="text-center">
+            <div 
+              className="animate-spin rounded-full h-12 w-12 border-4 border-t-transparent mx-auto mb-4"
+              style={{ borderColor: themeParams?.button_color || '#9333ea' }}
+            ></div>
+            <p style={{ color: themeParams?.text_color }}>
+              Авторизация через Telegram...
+            </p>
+          </div>
+        </div>
+      );
+    }
+
+    // If in Telegram and auth failed, show error
+    if (!isAuthenticated) {
+      return (
+        <div 
+          className="min-h-screen flex items-center justify-center p-4"
+          style={{ backgroundColor: themeParams?.bg_color || '#ffffff' }}
+        >
+          <div className="text-center max-w-sm">
+            <div className="text-6xl mb-4">⚠️</div>
+            <h2 
+              className="text-xl font-bold mb-2"
+              style={{ color: themeParams?.text_color || '#000000' }}
+            >
+              Ошибка авторизации
+            </h2>
+            <p 
+              className="mb-4"
+              style={{ color: themeParams?.hint_color || '#999999' }}
+            >
+              Не удалось авторизоваться через Telegram. Попробуйте закрыть и открыть приложение снова.
+            </p>
+            <button
+              onClick={() => window.location.reload()}
+              className="px-6 py-2 rounded-lg font-medium transition-colors"
+              style={{ 
+                backgroundColor: themeParams?.button_color || '#2481cc',
+                color: themeParams?.button_text_color || '#ffffff'
+              }}
+            >
+              Попробовать снова
+            </button>
+          </div>
+        </div>
+      );
+    }
+
+    return null;
+  }
+
   const handleLogin = () => {
     // REMINDER: DO NOT HARDCODE THE URL, OR ADD ANY FALLBACKS OR REDIRECT URLS, THIS BREAKS THE AUTH
     const redirectUrl = window.location.origin + '/dashboard';
@@ -34,7 +108,7 @@ const Login = () => {
                 <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-3">
                   <Target className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="font-semibold mb-2">5 упражнений</h3>
+                <h3 className="font-semibold mb-2">8 упражнений</h3>
                 <p className="text-sm text-gray-600">
                   Разнообразные тренировки для развития мозга
                 </p>
