@@ -155,30 +155,34 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
       if (availableHoles.length === 0) return prevMoles;
       
       const holeIndex = availableHoles[Math.floor(Math.random() * availableHoles.length)];
+      const moleId = Date.now() + '_' + holeIndex;
       
       setTotalSpawned(prev => prev + 1);
       
+      // Track this mole in ref
+      moleStateRef.current[moleId] = { holeIndex, counted: false };
+      
       // Set timeout for this mole to hide
       const timeoutId = setTimeout(() => {
-        let shouldIncrementMiss = false;
+        // Check ref to prevent double counting
+        if (moleStateRef.current[moleId] && !moleStateRef.current[moleId].counted) {
+          moleStateRef.current[moleId].counted = true;
+          setMisses(m => m + 1);
+        }
         
         setMoles(prev => {
           if (prev[holeIndex]?.visible && !prev[holeIndex]?.hit) {
-            shouldIncrementMiss = true;
-            return { ...prev, [holeIndex]: { visible: false, hit: false } };
+            return { ...prev, [holeIndex]: { visible: false, hit: false, moleId: null } };
           }
           return prev;
         });
         
-        // Increment miss counter outside of setMoles to avoid double counting
-        if (shouldIncrementMiss) {
-          setMisses(m => m + 1);
-        }
+        delete moleStateRef.current[moleId];
       }, settings.moleVisibleTime);
       
       moleTimeoutsRef.current[holeIndex] = timeoutId;
       
-      return { ...prevMoles, [holeIndex]: { visible: true, hit: false } };
+      return { ...prevMoles, [holeIndex]: { visible: true, hit: false, moleId } };
     });
   }, [settings.maxMoles, settings.moleVisibleTime, totalHoles]);
 
