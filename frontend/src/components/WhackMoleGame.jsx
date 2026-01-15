@@ -125,6 +125,7 @@ const WhackMoleGame = ({ difficulty, settings, onBack }) => {
   const timerRef = useRef(null);
   const spawnRef = useRef(null);
   const moleTimeoutsRef = useRef({});
+  const moleStateRef = useRef({}); // Track mole states to prevent double counting
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
   
