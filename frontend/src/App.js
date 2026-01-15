@@ -93,6 +93,14 @@ function AppRouter() {
         }
       />
       <Route
+        path="/exercise/math"
+        element={
+          <ProtectedRoute>
+            <MathPage />
+          </ProtectedRoute>
+        }
+      />
+      <Route
         path="/competitions"
         element={
           <ProtectedRoute>
