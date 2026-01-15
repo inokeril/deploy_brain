@@ -158,6 +158,8 @@ const Dashboard = () => {
       navigate('/exercise/whack-mole');
     } else if (exerciseId === 'sequence') {
       navigate('/exercise/sequence');
+    } else if (exerciseId === 'math') {
+      navigate('/exercise/math');
     } else {
       // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
