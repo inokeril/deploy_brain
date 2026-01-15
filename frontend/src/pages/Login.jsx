@@ -108,7 +108,7 @@ const Login = () => {
                 <div className="w-12 h-12 rounded-full bg-purple-100 flex items-center justify-center mb-3">
                   <Target className="w-6 h-6 text-purple-600" />
                 </div>
-                <h3 className="font-semibold mb-2">8 упражнений</h3>
+                <h3 className="font-semibold mb-2">9 упражнений</h3>
                 <p className="text-sm text-gray-600">
                   Разнообразные тренировки для развития мозга
                 </p>
