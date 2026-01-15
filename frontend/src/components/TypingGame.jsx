@@ -71,13 +71,15 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
       }
       
       const data = await response.json();
-      setTargetText(data.text);
+      // Clean and normalize the text - remove extra whitespace
+      const cleanedText = data.text.trim().replace(/\s+/g, ' ');
+      setTargetText(cleanedText);
     } catch (error) {
       console.error('Error generating text:', error);
       setGenerationError('Не удалось сгенерировать текст. Используем запасной вариант.');
       // Use fallback text
       const fallbacks = settings.fallbackTexts || ['Текст для тренировки печати.'];
-      setTargetText(fallbacks[Math.floor(Math.random() * fallbacks.length)]);
+      setTargetText(fallbacks[Math.floor(Math.random() * fallbacks.length)].trim());
     } finally {
       setIsGenerating(false);
     }
