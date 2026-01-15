@@ -1009,6 +1009,43 @@ async def save_typing_result(
         raise HTTPException(status_code=500, detail=str(e))
 
 # ============================================================================
+# SEQUENCE MEMORY GAME ROUTES
+# ============================================================================
+
+class SequenceSaveRequest(BaseModel):
+    difficulty: str
+    level_reached: int
+    max_sequence_length: int
+    grid_size: int
+
+@api_router.post("/sequence/save")
+async def save_sequence_result(
+    request: SequenceSaveRequest,
+    user: Dict[str, Any] = Depends(get_current_user)
+):
+    """Save sequence memory game result."""
+    try:
+        result_doc = {
+            "result_id": f"result_{uuid.uuid4().hex[:12]}",
+            "user_id": user["user_id"],
+            "exercise_id": "sequence",
+            "score": request.level_reached,
+            "time": 0,  # Not time-based
+            "difficulty": request.difficulty,
+            "level_reached": request.level_reached,
+            "max_sequence_length": request.max_sequence_length,
+            "grid_size": request.grid_size,
+            "created_at": datetime.now(timezone.utc).isoformat()
+        }
+        await db.user_results.insert_one(result_doc)
+        await update_game_progress(user["user_id"], "sequence", request.level_reached)
+        
+        return {"message": "Result saved", "result_id": result_doc["result_id"]}
+    except Exception as e:
+        logger.error(f"Error saving sequence result: {e}")
+        raise HTTPException(status_code=500, detail=str(e))
+
+# ============================================================================
 # BASIC ROUTES
 # ============================================================================
 
