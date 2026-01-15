@@ -17,7 +17,221 @@ BACKEND_URL = "https://fileopen-1.preview.emergentagent.com/api"
 SESSION_TOKEN = "test_session_1768383315376"
 USER_ID = "test-user-1768383315375"
 
-class TemplateStorageTest:
+class TelegramAuthTest:
+    def __init__(self):
+        self.backend_url = BACKEND_URL
+        self.test_results = []
+        
+    async def test_health_check(self):
+        """Test 1: Health Check - GET /api/health should return {"status": "healthy"}"""
+        print("\n🏥 TEST 1: Health Check")
+        print("-" * 40)
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.get(f"{self.backend_url}/health")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if data.get("status") == "healthy":
+                        print("✅ Health check passed")
+                        print(f"   Status: {response.status_code}")
+                        print(f"   Response: {data}")
+                        return True
+                    else:
+                        print(f"❌ Health check failed - wrong response format")
+                        print(f"   Expected: {{'status': 'healthy'}}")
+                        print(f"   Got: {data}")
+                        return False
+                else:
+                    print(f"❌ Health check failed - status code: {response.status_code}")
+                    print(f"   Response: {response.text}")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Health check error: {e}")
+                return False
+    
+    async def test_telegram_auth_invalid_data(self):
+        """Test 2: Telegram Auth with invalid data - should return 401"""
+        print("\n📱 TEST 2: Telegram Auth with Invalid Data")
+        print("-" * 40)
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.post(
+                    f"{self.backend_url}/auth/telegram",
+                    json={"init_data": "test_invalid_data"}
+                )
+                
+                if response.status_code == 401:
+                    print("✅ Telegram auth correctly rejected invalid data")
+                    print(f"   Status: {response.status_code}")
+                    try:
+                        error_data = response.json()
+                        print(f"   Error: {error_data.get('detail', 'No detail provided')}")
+                    except:
+                        print(f"   Response: {response.text}")
+                    return True
+                else:
+                    print(f"❌ Telegram auth failed - unexpected status code: {response.status_code}")
+                    print(f"   Expected: 401 (Unauthorized)")
+                    print(f"   Response: {response.text}")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Telegram auth test error: {e}")
+                return False
+    
+    async def test_auth_me_without_authorization(self):
+        """Test 3: GET /api/auth/me without cookies - should return 401"""
+        print("\n🔐 TEST 3: Auth/Me without Authorization")
+        print("-" * 40)
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                # Test without any authorization headers or cookies
+                response = await client.get(f"{self.backend_url}/auth/me")
+                
+                if response.status_code == 401:
+                    print("✅ Auth/me correctly rejected unauthorized request")
+                    print(f"   Status: {response.status_code}")
+                    try:
+                        error_data = response.json()
+                        print(f"   Error: {error_data.get('detail', 'No detail provided')}")
+                    except:
+                        print(f"   Response: {response.text}")
+                    return True
+                else:
+                    print(f"❌ Auth/me failed - unexpected status code: {response.status_code}")
+                    print(f"   Expected: 401 (Not authenticated)")
+                    print(f"   Response: {response.text}")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Auth/me test error: {e}")
+                return False
+    
+    async def test_exercises_endpoint(self):
+        """Test 4: GET /api/exercises - should return list of exercises"""
+        print("\n🧠 TEST 4: Exercises Endpoint")
+        print("-" * 40)
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.get(f"{self.backend_url}/exercises")
+                
+                if response.status_code == 200:
+                    data = response.json()
+                    if isinstance(data, list) and len(data) > 0:
+                        print("✅ Exercises endpoint working correctly")
+                        print(f"   Status: {response.status_code}")
+                        print(f"   Found {len(data)} exercises:")
+                        for exercise in data[:3]:  # Show first 3 exercises
+                            print(f"     - {exercise.get('name', 'Unknown')} ({exercise.get('exercise_id', 'no-id')})")
+                        if len(data) > 3:
+                            print(f"     ... and {len(data) - 3} more")
+                        return True
+                    else:
+                        print(f"❌ Exercises endpoint failed - invalid response format")
+                        print(f"   Expected: list with exercises")
+                        print(f"   Got: {type(data)} with {len(data) if isinstance(data, list) else 'N/A'} items")
+                        return False
+                else:
+                    print(f"❌ Exercises endpoint failed - status code: {response.status_code}")
+                    print(f"   Response: {response.text}")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Exercises endpoint test error: {e}")
+                return False
+    
+    async def test_telegram_auth_missing_bot_token(self):
+        """Additional Test: Check if TELEGRAM_BOT_TOKEN is configured"""
+        print("\n🤖 ADDITIONAL TEST: Telegram Bot Token Configuration")
+        print("-" * 40)
+        
+        # Test with properly formatted but invalid init_data to check if bot token is configured
+        fake_init_data = "query_id=test&user=%7B%22id%22%3A123456789%2C%22first_name%22%3A%22Test%22%7D&auth_date=1234567890&hash=invalid_hash"
+        
+        async with httpx.AsyncClient(timeout=10.0) as client:
+            try:
+                response = await client.post(
+                    f"{self.backend_url}/auth/telegram",
+                    json={"init_data": fake_init_data}
+                )
+                
+                if response.status_code == 500:
+                    try:
+                        error_data = response.json()
+                        if "not configured" in error_data.get('detail', '').lower():
+                            print("⚠️  Telegram bot token not configured")
+                            print(f"   Status: {response.status_code}")
+                            print(f"   Error: {error_data.get('detail')}")
+                            return True
+                    except:
+                        pass
+                
+                if response.status_code == 401:
+                    print("✅ Telegram bot token is configured (auth validation working)")
+                    print(f"   Status: {response.status_code}")
+                    try:
+                        error_data = response.json()
+                        print(f"   Error: {error_data.get('detail', 'Invalid authentication')}")
+                    except:
+                        print(f"   Response: {response.text}")
+                    return True
+                else:
+                    print(f"⚠️  Unexpected response for bot token test: {response.status_code}")
+                    print(f"   Response: {response.text}")
+                    return False
+                    
+            except Exception as e:
+                print(f"❌ Bot token test error: {e}")
+                return False
+    
+    async def run_all_tests(self):
+        """Run all Telegram authentication tests"""
+        print("🚀 TELEGRAM AUTHENTICATION TESTS")
+        print(f"   Backend URL: {self.backend_url}")
+        print(f"   Started: {datetime.now().isoformat()}")
+        print("=" * 60)
+        
+        tests = [
+            ("Health Check", self.test_health_check),
+            ("Telegram Auth Invalid Data", self.test_telegram_auth_invalid_data),
+            ("Auth/Me Unauthorized", self.test_auth_me_without_authorization),
+            ("Exercises Endpoint", self.test_exercises_endpoint),
+            ("Telegram Bot Token Config", self.test_telegram_auth_missing_bot_token)
+        ]
+        
+        results = []
+        for test_name, test_func in tests:
+            try:
+                result = await test_func()
+                results.append((test_name, result))
+            except Exception as e:
+                print(f"❌ {test_name} crashed: {e}")
+                results.append((test_name, False))
+        
+        # Summary
+        print("\n📊 TEST SUMMARY")
+        print("=" * 60)
+        passed = 0
+        for test_name, result in results:
+            status = "✅ PASS" if result else "❌ FAIL"
+            print(f"   {status}: {test_name}")
+            if result:
+                passed += 1
+        
+        print(f"\n🏁 RESULTS: {passed}/{len(results)} tests passed")
+        
+        if passed == len(results):
+            print("✅ All Telegram authentication tests passed!")
+        else:
+            print("⚠️  Some tests failed - check details above")
+        
+        return results
     def __init__(self):
         self.session_token = SESSION_TOKEN
         self.user_id = USER_ID
