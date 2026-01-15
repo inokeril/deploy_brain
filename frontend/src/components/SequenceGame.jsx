@@ -59,6 +59,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
   const showSequence = useCallback((seq) => {
     setGameState('showing');
     setShowingIndex(-1);
+    setUserSequence([]); // Clear user sequence at the start of showing
     
     let index = 0;
     
@@ -76,7 +77,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
       } else {
         setShowingIndex(-1);
         setGameState('input');
-        setUserSequence([]);
+        // userSequence already cleared at start
       }
     };
     
