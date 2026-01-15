@@ -133,19 +133,23 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
     const newText = e.target.value;
     setTypedText(newText);
     
-    // Check if completed
-    if (newText === targetText) {
-      endGame();
+    // Only end game if user typed the EXACT full text
+    // Use trimmed comparison to avoid whitespace issues
+    if (newText.length >= targetText.length && newText.trim() === targetText.trim()) {
+      endGame(newText);
     }
   };
 
-  const endGame = async () => {
+  const endGame = async (finalText = null) => {
     if (timerRef.current) clearInterval(timerRef.current);
     setGameState('finished');
     
+    // Use passed text or current state
+    const textToEvaluate = finalText || typedText;
+    
     const timeSpent = (Date.now() - startTime) / 1000;
-    const calculatedWpm = calculateWPM(typedText, timeSpent);
-    const calculatedAccuracy = calculateAccuracy(typedText, targetText);
+    const calculatedWpm = calculateWPM(textToEvaluate, timeSpent);
+    const calculatedAccuracy = calculateAccuracy(textToEvaluate, targetText);
     
     setWpm(calculatedWpm);
     setAccuracy(calculatedAccuracy);
