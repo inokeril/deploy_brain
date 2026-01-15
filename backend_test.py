@@ -11,7 +11,7 @@ import time
 from datetime import datetime
 
 # Backend URL from frontend/.env
-BACKEND_URL = "https://code-import-13.preview.emergentagent.com/api"
+BACKEND_URL = "https://brain-train-4.preview.emergentagent.com/api"
 
 # Test credentials from MongoDB setup
 SESSION_TOKEN = "test_session_1768383315376"

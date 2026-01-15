@@ -9,7 +9,7 @@ import json
 import time
 
 # Configuration
-BACKEND_URL = "https://code-import-13.preview.emergentagent.com"
+BACKEND_URL = "https://brain-train-4.preview.emergentagent.com"
 SESSION_TOKEN = "test_session_1768382576683"
 
 def test_complete_game_flow():

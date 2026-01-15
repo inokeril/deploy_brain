@@ -1,0 +1,161 @@
+<analysis>**original_problem_statement:**
+The user's initial request was to clone a project from the GitHub repository: . After the successful setup of the initial Schulte Table game, the user expanded the scope to transform the application into a comprehensive brain-training platform.
+
+**PRODUCT REQUIREMENTS (PRD):**
+*   **Platform Goal:** Create a brain-training platform featuring multiple mini-games.
+*   **Core Features:**
+    *   **Start Page:** A main menu displaying game cards.
+    *   **Navigation:** A header with links to Exercises, Competitions, Leaderboards, and Profile.
+    *   **Authentication:** Integration of  for Google-based login.
+    *   **Leaderboards:** Separate, all-time leaderboards for each game, showing Top 10/100.
+    *   **Competitions:** Weekly competitions based on a single exercise, with prizes.
+    *   **User Profile:** A section to view personal statistics, results history, and achievements.
+    *   **Player Level System:** A leveling mechanism for each game, determined by performance (results and time).
+*   **Mini-Games:**
+    1.  **Schulte Tables:** (Exists)
+    2.  **Spot the Difference:** AI-generated images () with a caching system to store and reuse image pairs. Difficulty levels vary by image size and number of differences.
+    3.  **Reaction Speed Suite:** The initial simple game was rejected and replaced with four new ones:
+        *   **Color Reaction (Stroop Test)**
+        *   **Catch the Letter**
+        *   **Whack-a-Mole**
+        *   **Typing Speed**
+
+**User's preferred language**:
+The user's primary language is **Russian (русский)**. The next agent **MUST** respond in Russian.
+
+**what currently exists?**
+The project is a full-stack application with a FastAPI backend, React frontend, and MongoDB database. The initial Schulte table game has been evolved into a larger platform structure.
+
+*   **Authentication & UI Shell (Phase 1 Complete):**  is fully integrated. The UI includes a main dashboard, navigation header, and placeholder pages for leaderboards, competitions, and user profiles. The backend provides APIs for authentication and user management.
+*   **Spot the Difference Game (Implemented):** This game uses Gemini AI to generate image pairs, with a caching system in MongoDB () to improve performance and reduce API calls. An issue with misaligned difference coordinates was addressed by expanding clickable zones.
+*   **New Mini-Game Suite (Implemented):** In response to user feedback, a simple reaction game was replaced with four new, more engaging games. The backend endpoints and frontend components for all four games (Color Reaction, Catch the Letter, Whack-a-Mole, and Typing Speed) have been created and integrated.
+
+**Last working item**:
+*   **Last item agent was working:** Implementing the last of the four new mini-games: **Typing Speed (Скорость печати)**. The agent created the necessary frontend page () and game component () and integrated them into the application's routing and dashboard.
+*   **Status:** IN PROGRESS
+*   **Agent Testing Done:** N
+*   **Which testing method agent to use?** Frontend testing agent
+*   **User Testing Done:** N
+
+**All Pending/In progress Issue list**:
+*   **Issue 1: Misaligned coordinates in Spot the Difference game (P0)**
+    *   **Description:** The user reported that the clickable zones for differences did not match their visual location.
+    *   **Attempted fixes:** The agent expanded the coordinate ranges for the clickable zones in  and ran a script to update all existing image templates in the database with the new, larger zones.
+    *   **Next debug checklist:** This fix needs to be verified by the user. The next agent should ask the user to test the Spot the Difference game again to confirm the issue is resolved.
+    *   **Why fix this issue and what will be achieved with the fix?** This is a critical gameplay bug. Fixing it will make the Spot the Difference game playable and fair.
+    *   **Status:** USER VERIFICATION PENDING
+    *   **Is recurring issue?** N
+    *   **Should Test frontend/backend/both after fix?** Frontend
+
+**In progress Task List**:
+*   **Task 1: Finalize and Test the Four New Mini-Games (P0)**
+    *   **Where to resume:** The agent has created the files and integrated the routing for all four new games (Color Reaction, Catch the Letter, Whack-a-Mole, Typing Speed). The next step is to confirm with the user that this implementation phase is complete and then proceed with thorough testing of all four games.
+    *   **What will be achieved with this?** The application will feature five fully playable mini-games, completing a major development milestone requested by the user.
+    *   **Status:** IN PROGRESS
+    *   **Should Test frontend/backend/both after fix?** Both
+
+**Upcoming and Future Tasks**
+*   **Upcoming Tasks (Next Iteration):**
+    *   **P0: Implement Leaderboards:** Create the  page to display ranked user scores for each game, fetched from the backend. Implement UI for game selection and Top 10/100 views.
+    *   **P1: Implement Player Level System:** Develop the backend logic to calculate and update user levels based on game performance. Display these levels in the user's profile and on the leaderboards.
+*   **Future Tasks:**
+    *   **P2: Implement Competitions:** Build the system for managing and displaying weekly competitions.
+    *   **P3: Enhance User Profile:** Develop the  page to show detailed statistics, progress graphs, and achievements.
+    *   **P4: Add Remaining Games:** Implement the two final requested games: Запоминание последовательностей (Sequence Memory) and Математические задачи (Math Problems).
+
+**Completed work in this session**
+*   **Project Setup:** Cloned the entire project from the user's GitHub repository and set up the environment.
+*   **Platform Foundation (Phase 1):**
+    *   Implemented a full authentication system using .
+    *   Created the main application structure including a dashboard, header, and pages for various features.
+*   **Spot the Difference Game:**
+    *   Developed the backend logic with AI image generation ().
+    *   Implemented a performance-optimizing caching system for generated images.
+    *   Created the frontend components and page (, ).
+*   **New Mini-Game Suite:**
+    *   Replaced a rejected game with four new ones as per user request.
+    *   Created backend endpoints in  for saving scores for all new games.
+    *   Created all necessary frontend pages and components for Color Reaction, Catch the Letter, Whack-a-Mole, and Typing Speed.
+
+**Code Architecture**
+
+
+**Key Technical Concepts**
+*   **Frontend:** React, TailwindCSS, React Router
+*   **Backend:** FastAPI, Pydantic
+*   **Database:** MongoDB (asynchronous with )
+*   **Authentication:**  (a wrapper for Google OAuth)
+*   **AI Integration:**  library for image generation with Gemini Nano Banana
+
+**key DB schema**
+*   : 
+*   : 
+*   : 
+*   : 
+*   : 
+*   : 
+*   : 
+
+**All files of reference**
+*   : Contains all API endpoints, database models, and business logic.
+*   : Manages AI image generation for the Spot the Difference game.
+*   : Defines the application's routes and protected areas.
+*   : The main menu where users select a game.
+*   : Handles user authentication state across the app.
+*   Game-specific files in  and .
+
+**Areas that need refactoring**:
+*    has grown large and contains logic for all games. It could be beneficial to split the API endpoints into separate  instances for better organization and maintainability.
+
+**key api endpoints**
+*   , , , 
+*   
+*   , 
+*   
+*   
+*   
+*   
+*   
+
+**Critical Info for New Agent**
+*   **Follow the Plan:** The user has approved a phased development plan. The current priority is to finalize and test the newly added mini-games.
+*   **AI and Caching:** The Spot the Difference game relies on an AI image generator and a database caching layer. Be mindful of this architecture when making changes. The AI integration uses the .
+*   **User Communication:** Always respond in Russian. Confirm completion of major steps and ask for verification, especially for bug fixes like the Spot the Difference coordinate issue.
+
+**documents and test reports created in this job**
+*   
+*   
+*   
+
+**Last 10 User Messages and any pending HUMAN messages**
+1.  **User:** Great, let's move on to the next game. (After Whack-a-Mole)
+2.  **User:** Excellent, let's move on to developing the next exercise. (After Catch the Letter)
+3.  **User:** Okay, let's start writing the next game. (After Stroop Test)
+4.  **User:** 1 (in response to create all 4 games now?)
+5.  **User:** Let's add these games: Color Reaction, Catch the Letter, Whack-a-Mole, Typing Speed. And let's replace the reaction speed card with 4 new cards.
+6.  **User:** I don't really like this reaction game, we need to come up with something else.
+7.  **User:** Great, now let's make the reaction speed game.
+8.  **User:** Excellent, but sometimes in the spot the difference game the coordinates are placed incorrectly, for example, the difference is at the bottom, but to count it, you need to poke at the top.
+9.  **User:** Okay, so let's make it so that the generated pictures are saved. Then the user will be given some existing picture, but at the same time, one picture cannot appear twice for the user, respectively, we will gain some base of generated pictures, but if the user has already solved all the existing pictures, then we will generate a new one for him, do you understand what I mean?
+10. **User:** Yes, let's do it so that when you go to the site you can choose other mini-exercises (they are not there yet and there is only one), but I mean that you need a start page. You will also need authorization and a leaderboard, ideally I see a site with competitions for some of the mini-exercises. Do you know what I mean?
+
+**Project Health Check:**
+*   **Working:** Core application structure, authentication, Schulte Table game, and Spot the Difference game (pending bug verification). The four new games are structurally implemented but require testing.
+*   **Broken:** Nothing is critically broken.
+*   **Mocked:** No mocked services. The application uses live database and AI integrations.
+
+**3rd Party Integrations**
+*   **Google OAuth (via Emergent Authentication)**: Used for user login.
+*   **Gemini Nano Banana (imagen-3.0-generate-002)**: Accessed via  library for AI image generation. Uses the **Emergent LLM Key**.
+
+**Testing status**
+*   **Testing agent used after significant changes:** YES (for backend APIs)
+*   **Troubleshoot agent used after agent stuck in loop:** NO
+*   **Test files created:** None
+*   **Known regressions:** None
+
+**Credentials to test flow:**
+No specific credentials are required. Testing should be performed using the Login with Google button, which utilizes the built-in  flow.
+
+**What agent forgot to execute**
+The agent was in the middle of a multi-step task (implementing four games). It has not forgotten any steps but needs to complete the current task by confirming its completion with the user and then initiating a testing phase for the new features.</analysis>
