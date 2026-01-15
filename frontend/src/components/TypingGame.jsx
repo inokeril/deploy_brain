@@ -22,6 +22,8 @@ const TypingGame = ({ difficulty, settings, onBack }) => {
   const timerRef = useRef(null);
   const prepareTimerRef = useRef(null);
   const inputRef = useRef(null);
+  const typedTextRef = useRef(''); // Track typed text for timer callback
+  const gameEndedRef = useRef(false); // Prevent double ending
 
   const difficultyNames = { easy: 'Легко', medium: 'Средне', hard: 'Сложно' };
 
