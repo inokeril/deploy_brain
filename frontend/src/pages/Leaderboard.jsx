@@ -35,9 +35,31 @@ const getRankColor = (rank) => {
   }
 };
 
-const LeaderboardRow = ({ player, rank, isCurrentUser, isTelegram, themeParams }) => {
+// Define metric types for exercises
+const getExerciseMetric = (exerciseId) => {
+  const scoreBasedExercises = ['whack-mole', 'catch-letter', 'math'];
+  const wpmBasedExercises = ['typing'];
+  
+  if (scoreBasedExercises.includes(exerciseId)) {
+    return { type: 'score', label: 'Очки', suffix: '' };
+  } else if (wpmBasedExercises.includes(exerciseId)) {
+    return { type: 'wpm', label: 'WPM', suffix: '' };
+  } else {
+    return { type: 'time', label: 'Время', suffix: 'с' };
+  }
+};
+
+const LeaderboardRow = ({ player, rank, isCurrentUser, isTelegram, themeParams, metric }) => {
   const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
   const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
+  const formatScore = (value) => {
+    if (metric.type === 'time') {
+      return `${value.toFixed(1)}${metric.suffix}`;
+    } else {
+      return `${Math.round(value)}${metric.suffix}`;
+    }
+  };
 
   return (
     <div
@@ -92,9 +114,9 @@ const LeaderboardRow = ({ player, rank, isCurrentUser, isTelegram, themeParams }
         {/* Stats */}
         <div className="flex items-center space-x-2 sm:space-x-6 text-xs sm:text-sm flex-shrink-0">
           <div className="text-center">
-            <p style={hintStyle} className="hidden sm:block">Лучшее</p>
+            <p style={hintStyle} className="hidden sm:block">{metric.label}</p>
             <p className="font-bold" style={{ color: isTelegram ? themeParams?.accent_text_color : '#9333ea' }}>
-              {player.best_time.toFixed(1)}с
+              {formatScore(player.best_time)}
             </p>
           </div>
           <div className="text-center hidden sm:block">
@@ -134,7 +156,6 @@ const Leaderboard = () => {
       if (response.ok) {
         const data = await response.json();
         setExercises(data);
-        // Auto-select first exercise
         if (data.length > 0 && !selectedExercise) {
           setSelectedExercise(data[0].exercise_id);
         }
@@ -165,11 +186,21 @@ const Leaderboard = () => {
   };
 
   const currentExercise = exercises.find(e => e.exercise_id === selectedExercise);
+  const currentMetric = getExerciseMetric(selectedExercise);
 
   const bgStyle = isTelegram ? { backgroundColor: themeParams?.bg_color } : {};
   const cardStyle = isTelegram ? { backgroundColor: themeParams?.secondary_bg_color || themeParams?.bg_color } : {};
   const textStyle = isTelegram ? { color: themeParams?.text_color } : {};
   const hintStyle = isTelegram ? { color: themeParams?.hint_color } : {};
+
+  const formatBestScore = (value) => {
+    if (!value && value !== 0) return '--';
+    if (currentMetric.type === 'time') {
+      return `${value.toFixed(1)}${currentMetric.suffix}`;
+    } else {
+      return `${Math.round(value)}${currentMetric.suffix}`;
+    }
+  };
 
   return (
     <div className={`min-h-screen ${!isTelegram ? 'bg-gradient-to-br from-purple-50 via-blue-50 to-pink-50' : ''}`} style={bgStyle}>
@@ -235,6 +266,9 @@ const Leaderboard = () => {
                 <p className="text-xs sm:text-sm" style={hintStyle}>
                   {currentExercise?.description}
                 </p>
+                <Badge className="mt-2 text-xs" variant="outline">
+                  Рейтинг по: {currentMetric.label}
+                </Badge>
               </div>
               <Trophy className="w-8 h-8 sm:w-12 sm:h-12 text-yellow-500 flex-shrink-0" />
             </div>
@@ -265,10 +299,10 @@ const Leaderboard = () => {
                     isCurrentUser={player.user_id === user?.user_id}
                     isTelegram={isTelegram}
                     themeParams={themeParams}
+                    metric={currentMetric}
                   />
                 ))}
 
-                {/* Show More Button */}
                 {limit === 10 && leaderboardData.length === 10 && (
                   <div className="pt-4">
                     <Button
@@ -320,7 +354,7 @@ const Leaderboard = () => {
               <div className="text-center">
                 <p className="text-xs sm:text-sm mb-1" style={hintStyle}>Лучший</p>
                 <p className="text-xl sm:text-3xl font-bold" style={{ color: themeParams?.link_color || '#3b82f6' }}>
-                  {leaderboardData.length > 0 ? `${leaderboardData[0].best_time.toFixed(1)}с` : '--'}
+                  {leaderboardData.length > 0 ? formatBestScore(leaderboardData[0].best_time) : '--'}
                 </p>
               </div>
             </CardContent>
