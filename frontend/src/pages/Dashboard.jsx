@@ -160,6 +160,8 @@ const Dashboard = () => {
       navigate('/exercise/sequence');
     } else if (exerciseId === 'math') {
       navigate('/exercise/math');
+    } else if (exerciseId === 'typing') {
+      navigate('/exercise/typing');
     } else {
       // TODO: Navigate to other exercises when they're ready
       alert('Это упражнение скоро будет доступно!');
