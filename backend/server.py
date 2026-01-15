@@ -147,6 +147,79 @@ class ResultCreate(BaseModel):
     time: float
     grid_size: Optional[int] = None
 
+# Telegram Auth models
+class TelegramAuthRequest(BaseModel):
+    init_data: str  # Raw initData string from Telegram WebApp
+
+class TelegramUser(BaseModel):
+    id: int
+    first_name: str
+    last_name: Optional[str] = None
+    username: Optional[str] = None
+    language_code: Optional[str] = None
+    photo_url: Optional[str] = None
+
+# ============================================================================
+# TELEGRAM AUTH HELPERS
+# ============================================================================
+
+def validate_telegram_init_data(init_data: str, bot_token: str) -> Optional[Dict[str, Any]]:
+    """
+    Validate Telegram WebApp initData using HMAC-SHA256.
+    Returns parsed data if valid, None if invalid.
+    """
+    try:
+        # Parse init_data
+        parsed_data = dict(parse_qsl(init_data, keep_blank_values=True))
+        
+        if 'hash' not in parsed_data:
+            logger.error("No hash in init_data")
+            return None
+        
+        received_hash = parsed_data.pop('hash')
+        
+        # Create data-check-string
+        data_check_arr = []
+        for key in sorted(parsed_data.keys()):
+            data_check_arr.append(f"{key}={parsed_data[key]}")
+        data_check_string = '\n'.join(data_check_arr)
+        
+        # Create secret key: HMAC-SHA256(bot_token, "WebAppData")
+        secret_key = hmac.new(
+            b"WebAppData",
+            bot_token.encode(),
+            hashlib.sha256
+        ).digest()
+        
+        # Calculate hash
+        calculated_hash = hmac.new(
+            secret_key,
+            data_check_string.encode(),
+            hashlib.sha256
+        ).hexdigest()
+        
+        if calculated_hash != received_hash:
+            logger.error(f"Hash mismatch: {calculated_hash} != {received_hash}")
+            return None
+        
+        # Check auth_date (optional: reject if too old)
+        auth_date = int(parsed_data.get('auth_date', 0))
+        current_time = int(datetime.now(timezone.utc).timestamp())
+        if current_time - auth_date > 86400:  # 24 hours
+            logger.warning("Telegram auth_date is too old, but allowing for development")
+            # In production, you might want to reject old auth
+        
+        # Parse user data
+        if 'user' in parsed_data:
+            user_data = json.loads(unquote(parsed_data['user']))
+            parsed_data['user'] = user_data
+        
+        return parsed_data
+        
+    except Exception as e:
+        logger.error(f"Error validating Telegram init_data: {e}")
+        return None
+
 # ============================================================================
 # AUTHENTICATION HELPERS
 # ============================================================================
