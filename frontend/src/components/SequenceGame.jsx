@@ -61,6 +61,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
     setGameState('showing');
     setShowingIndex(-1);
     setUserSequence([]); // Clear user sequence at the start of showing
+    currentSequenceRef.current = seq; // Store in ref for immediate access
     
     let index = 0;
     
@@ -90,6 +91,7 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
     const initialLength = settings.startLength;
     const newSequence = generateSequence(initialLength);
     setSequence(newSequence);
+    currentSequenceRef.current = newSequence;
     setCurrentLevel(1);
     setBestLevel(0);
     setUserSequence([]);
@@ -106,16 +108,19 @@ const SequenceGame = ({ difficulty, settings, onBack }) => {
     const newUserSequence = [...userSequence, cellIndex];
     setUserSequence(newUserSequence);
     
+    // Use ref for immediate access to current sequence
+    const targetSequence = currentSequenceRef.current;
+    
     // Check if correct so far
     const currentIndex = newUserSequence.length - 1;
-    if (newUserSequence[currentIndex] !== sequence[currentIndex]) {
+    if (newUserSequence[currentIndex] !== targetSequence[currentIndex]) {
       // Wrong! Game over
       handleGameOver();
       return;
     }
     
     // Check if sequence complete
-    if (newUserSequence.length === sequence.length) {
+    if (newUserSequence.length === targetSequence.length) {
       // Success! Next level
       handleLevelComplete();
     }
