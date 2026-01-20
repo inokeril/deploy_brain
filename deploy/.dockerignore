@@ -1,0 +1,41 @@
+# Git
+.git
+.gitignore
+
+# Node
+node_modules
+npm-debug.log
+yarn-error.log
+
+# Build
+build
+dist
+
+# IDE
+.idea
+.vscode
+*.swp
+*.swo
+
+# OS
+.DS_Store
+Thumbs.db
+
+# Env files (кроме .env.example)
+.env.local
+.env.development
+.env.production
+
+# Logs
+*.log
+logs
+
+# Tests
+coverage
+__tests__
+*.test.js
+*.spec.js
+
+# Documentation
+README.md
+docs
