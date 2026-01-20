@@ -9,7 +9,7 @@ import json
 import time
 
 # Configuration
-BACKEND_URL = "https://fileopen-1.preview.emergentagent.com"
+BACKEND_URL = "https://server-deploy-10.preview.emergentagent.com"
 SESSION_TOKEN = "test_session_1768382576683"
 
 def test_complete_game_flow():
