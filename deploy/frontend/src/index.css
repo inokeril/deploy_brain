@@ -1,0 +1,329 @@
+@tailwind base;
+@tailwind components;
+@tailwind utilities;
+
+/* Import calming, readable font */
+@import url('https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600&display=swap');
+
+/* Telegram Web App CSS Variables */
+:root {
+    --tg-theme-bg-color: #ffffff;
+    --tg-theme-text-color: #000000;
+    --tg-theme-hint-color: #999999;
+    --tg-theme-link-color: #2481cc;
+    --tg-theme-button-color: #2481cc;
+    --tg-theme-button-text-color: #ffffff;
+    --tg-theme-secondary-bg-color: #f0f0f0;
+    --tg-theme-header-bg-color: #ffffff;
+    --tg-theme-accent-text-color: #2481cc;
+    --tg-theme-section-bg-color: #ffffff;
+    --tg-theme-section-header-text-color: #999999;
+    --tg-theme-subtitle-text-color: #999999;
+    --tg-theme-destructive-text-color: #ff3b30;
+}
+
+body {
+    margin: 0;
+    font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+    -webkit-font-smoothing: antialiased;
+    -moz-osx-font-smoothing: grayscale;
+    /* Prevent overscroll bounce on iOS */
+    overscroll-behavior: none;
+    /* Safe area insets for notched devices */
+    padding-top: env(safe-area-inset-top);
+    padding-bottom: env(safe-area-inset-bottom);
+    padding-left: env(safe-area-inset-left);
+    padding-right: env(safe-area-inset-right);
+}
+
+/* Telegram Mini App specific styles */
+.telegram-app {
+    min-height: 100vh;
+    min-height: 100dvh; /* Dynamic viewport height for mobile */
+}
+
+/* Prevent text selection in game areas */
+.no-select {
+    -webkit-touch-callout: none;
+    -webkit-user-select: none;
+    -khtml-user-select: none;
+    -moz-user-select: none;
+    -ms-user-select: none;
+    user-select: none;
+}
+
+/* Smooth scrolling */
+html {
+    scroll-behavior: smooth;
+}
+
+/* Custom scrollbar for Telegram */
+::-webkit-scrollbar {
+    width: 4px;
+}
+
+::-webkit-scrollbar-track {
+    background: transparent;
+}
+
+::-webkit-scrollbar-thumb {
+    background: var(--tg-theme-hint-color);
+    border-radius: 2px;
+}
+
+code {
+    font-family: source-code-pro, Menlo, Monaco, Consolas, 'Courier New', monospace;
+}
+
+@layer base {
+    :root {
+        /* Calm, muted color palette - soft sage, lavender, dusty rose */
+        --background: 40 30% 97%;           /* Warm off-white cream */
+        --foreground: 220 15% 25%;          /* Soft charcoal */
+        
+        --card: 40 25% 98%;                 /* Soft cream card */
+        --card-foreground: 220 15% 25%;
+        
+        --popover: 40 25% 98%;
+        --popover-foreground: 220 15% 25%;
+        
+        /* Primary - Muted sage green */
+        --primary: 150 25% 45%;             /* Soft sage */
+        --primary-foreground: 0 0% 100%;
+        
+        /* Secondary - Soft lavender */
+        --secondary: 250 30% 92%;           /* Light lavender */
+        --secondary-foreground: 250 20% 35%;
+        
+        /* Muted tones */
+        --muted: 40 20% 94%;                /* Soft warm gray */
+        --muted-foreground: 220 10% 50%;
+        
+        /* Accent - Dusty rose */
+        --accent: 350 35% 90%;              /* Soft dusty rose */
+        --accent-foreground: 350 25% 35%;
+        
+        /* Success state - for correct answers */
+        --success: 150 40% 88%;             /* Soft mint green */
+        --success-foreground: 150 35% 30%;
+        
+        /* Error state */
+        --destructive: 0 50% 90%;
+        --destructive-foreground: 0 50% 35%;
+        
+        --border: 40 20% 88%;
+        --input: 40 20% 90%;
+        --ring: 150 25% 45%;
+        
+        --radius: 0.75rem;
+        
+        /* Custom cell colors - soft pastel palette */
+        --cell-1: 350 35% 92%;    /* Dusty rose */
+        --cell-2: 250 30% 92%;    /* Soft lavender */
+        --cell-3: 150 30% 90%;    /* Mint */
+        --cell-4: 40 40% 90%;     /* Warm cream */
+        --cell-5: 200 35% 90%;    /* Soft sky blue */
+        --cell-6: 30 40% 90%;     /* Soft peach */
+        --cell-7: 280 25% 92%;    /* Light purple */
+        --cell-8: 180 30% 90%;    /* Soft teal */
+        
+        /* Animation timing */
+        --transition-smooth: 0.25s cubic-bezier(0.4, 0, 0.2, 1);
+        --transition-bounce: 0.3s cubic-bezier(0.34, 1.56, 0.64, 1);
+        
+        /* Shadows */
+        --shadow-soft: 0 2px 8px -2px hsl(220 15% 25% / 0.08);
+        --shadow-card: 0 4px 20px -4px hsl(220 15% 25% / 0.1);
+        --shadow-hover: 0 8px 30px -6px hsl(220 15% 25% / 0.15);
+    }
+    
+    .dark {
+        --background: 220 15% 10%;
+        --foreground: 40 20% 95%;
+        
+        --card: 220 15% 13%;
+        --card-foreground: 40 20% 95%;
+        
+        --popover: 220 15% 13%;
+        --popover-foreground: 40 20% 95%;
+        
+        --primary: 150 30% 50%;
+        --primary-foreground: 220 15% 10%;
+        
+        --secondary: 250 20% 20%;
+        --secondary-foreground: 250 25% 85%;
+        
+        --muted: 220 15% 18%;
+        --muted-foreground: 220 10% 60%;
+        
+        --accent: 350 25% 25%;
+        --accent-foreground: 350 30% 85%;
+        
+        --success: 150 30% 25%;
+        --success-foreground: 150 30% 85%;
+        
+        --destructive: 0 40% 25%;
+        --destructive-foreground: 0 40% 90%;
+        
+        --border: 220 15% 20%;
+        --input: 220 15% 20%;
+        --ring: 150 30% 50%;
+        
+        --cell-1: 350 25% 22%;
+        --cell-2: 250 20% 22%;
+        --cell-3: 150 25% 20%;
+        --cell-4: 40 25% 20%;
+        --cell-5: 200 25% 20%;
+        --cell-6: 30 25% 22%;
+        --cell-7: 280 20% 22%;
+        --cell-8: 180 25% 20%;
+    }
+}
+
+@layer base {
+    * {
+        @apply border-border;
+    }
+    body {
+        @apply bg-background text-foreground;
+    }
+}
+
+@layer base {
+    [data-debug-wrapper="true"] {
+        display: contents !important;
+    }
+
+    [data-debug-wrapper="true"] > * {
+        margin-left: inherit;
+        margin-right: inherit;
+        margin-top: inherit;
+        margin-bottom: inherit;
+        padding-left: inherit;
+        padding-right: inherit;
+        padding-top: inherit;
+        padding-bottom: inherit;
+        column-gap: inherit;
+        row-gap: inherit;
+        gap: inherit;
+        border-left-width: inherit;
+        border-right-width: inherit;
+        border-top-width: inherit;
+        border-bottom-width: inherit;
+        border-left-style: inherit;
+        border-right-style: inherit;
+        border-top-style: inherit;
+        border-bottom-style: inherit;
+        border-left-color: inherit;
+        border-right-color: inherit;
+        border-top-color: inherit;
+        border-bottom-color: inherit;
+    }
+}
+
+/* Custom animations */
+@keyframes pulse-soft {
+    0%, 100% {
+        opacity: 1;
+    }
+    50% {
+        opacity: 0.7;
+    }
+}
+
+@keyframes scale-in {
+    0% {
+        transform: scale(0.95);
+        opacity: 0;
+    }
+    100% {
+        transform: scale(1);
+        opacity: 1;
+    }
+}
+
+@keyframes cell-correct {
+    0% {
+        transform: scale(1);
+        background-color: hsl(var(--success));
+    }
+    50% {
+        transform: scale(1.05);
+        background-color: hsl(var(--success));
+    }
+    100% {
+        transform: scale(1);
+        background-color: hsl(var(--success));
+    }
+}
+
+@keyframes cell-wrong {
+    0%, 100% {
+        transform: translateX(0);
+    }
+    25% {
+        transform: translateX(-3px);
+    }
+    75% {
+        transform: translateX(3px);
+    }
+}
+
+@keyframes fade-in-up {
+    0% {
+        opacity: 0;
+        transform: translateY(10px);
+    }
+    100% {
+        opacity: 1;
+        transform: translateY(0);
+    }
+}
+
+@keyframes confetti-fall {
+    0% {
+        transform: translateY(-10vh) rotate(0deg);
+        opacity: 1;
+    }
+    100% {
+        transform: translateY(100vh) rotate(720deg);
+        opacity: 0;
+    }
+}
+
+/* Utility classes for animations */
+.animate-pulse-soft {
+    animation: pulse-soft 2s ease-in-out infinite;
+}
+
+.animate-scale-in {
+    animation: scale-in 0.3s ease-out forwards;
+}
+
+.animate-cell-correct {
+    animation: cell-correct 0.4s ease-out forwards;
+}
+
+.animate-cell-wrong {
+    animation: cell-wrong 0.3s ease-in-out;
+}
+
+.animate-fade-in-up {
+    animation: fade-in-up 0.5s ease-out forwards;
+}
+
+.animate-confetti {
+    animation: confetti-fall 3s linear forwards;
+}
+
+/* Stagger animations for grid cells */
+.stagger-1 { animation-delay: 0.02s; }
+.stagger-2 { animation-delay: 0.04s; }
+.stagger-3 { animation-delay: 0.06s; }
+.stagger-4 { animation-delay: 0.08s; }
+.stagger-5 { animation-delay: 0.1s; }
+.stagger-6 { animation-delay: 0.12s; }
+.stagger-7 { animation-delay: 0.14s; }
+.stagger-8 { animation-delay: 0.16s; }
+.stagger-9 { animation-delay: 0.18s; }
+.stagger-10 { animation-delay: 0.2s; }
